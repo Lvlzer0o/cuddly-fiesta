@@ -17,12 +17,12 @@
 ## 📁 File Structure
 
 ```
-./
+ecg_project/
 ├── ecg_baseline.py              # Original baseline with clinical markers
 ├── ecg_core.py                  # Core architecture with immutable grid
 ├── waveform_segments.py         # Example P-wave & QRS modules
 ├── requirements.txt             # Dependencies
-├── ecg_env/                     # Virtual environment
+├── venv/                        # Virtual environment
 └── Generated plots (in $OUTPUT_DIR):
     ├── ecg_baseline_demo.png
     ├── ecg_modular_architecture.png
