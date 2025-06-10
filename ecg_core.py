@@ -14,19 +14,27 @@ import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional
 import warnings
+from grid_constants import (
+    PAPER_SPEED_MM_PER_SEC,
+    VOLTAGE_SCALE_MM_PER_MV,
+    SMALL_SQUARE_TIME_SEC,
+    SMALL_SQUARE_VOLTAGE_MV,
+    LARGE_SQUARE_TIME_SEC,
+    LARGE_SQUARE_VOLTAGE_MV,
+)
 
 class GridScaling:
     """Immutable grid scaling constants - NEVER modify these values."""
-    
-    # Standard ECG parameters - IMMUTABLE
-    PAPER_SPEED_MM_PER_SEC = 25      # 25 mm/sec
-    VOLTAGE_SCALE_MM_PER_MV = 10     # 10 mm/mV
-    
-    # Grid dimensions - IMMUTABLE  
-    SMALL_SQUARE_TIME_SEC = 0.04     # 1mm = 0.04 sec
-    SMALL_SQUARE_VOLTAGE_MV = 0.1    # 1mm = 0.1 mV
-    LARGE_SQUARE_TIME_SEC = 0.2      # 5mm = 0.2 sec
-    LARGE_SQUARE_VOLTAGE_MV = 0.5    # 5mm = 0.5 mV
+
+    # Standard ECG parameters sourced from shared constants
+    PAPER_SPEED_MM_PER_SEC = PAPER_SPEED_MM_PER_SEC
+    VOLTAGE_SCALE_MM_PER_MV = VOLTAGE_SCALE_MM_PER_MV
+
+    # Grid dimensions - IMMUTABLE
+    SMALL_SQUARE_TIME_SEC = SMALL_SQUARE_TIME_SEC
+    SMALL_SQUARE_VOLTAGE_MV = SMALL_SQUARE_VOLTAGE_MV
+    LARGE_SQUARE_TIME_SEC = LARGE_SQUARE_TIME_SEC
+    LARGE_SQUARE_VOLTAGE_MV = LARGE_SQUARE_VOLTAGE_MV
     
     @classmethod
     def validate_timing(cls, duration_ms: float) -> bool:
