@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ecg-generator"
+version = "0.1.0"
+description = "Modular ECG waveform generator"
+readme = "README.md"
+authors = [
+    {name = "Unknown"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "matplotlib>=3.5.0",
+    "scipy>=1.7.0",
+]
+
+[project.scripts]
+ecg-core-demo = "ecg_core:main"
+p-wave-generator = "p_wave_generator:main"
+verify-improvements = "verify_improvements:main"
+p-wave-summary = "p_wave_summary:print_p_wave_summary"
+
+[tool.setuptools]
+py-modules = [
+    "clinical_validator",
+    "ecg_baseline",
+    "ecg_core",
+    "p_wave_generator",
+    "p_wave_summary",
+    "verify_improvements",
+    "waveform_segments",
+]
