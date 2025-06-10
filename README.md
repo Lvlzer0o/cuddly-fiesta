@@ -191,3 +191,18 @@ Ready to implement:
 ```
 
 The architecture ensures clinical accuracy while maintaining code modularity for easy arrhythmia development.
+
+## Running Tests
+
+Install requirements and run the test suite using `pytest`:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+The tests can also be executed with the standard library:
+
+```bash
+python -m unittest discover -s tests
+```
