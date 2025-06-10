@@ -15,6 +15,8 @@ NOTE: All amplitudes are relative to R-wave = 1.0mV (standard calibration).
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
+import os
+from pathlib import Path
 from ecg_baseline import ECGBaseline
 from grid_constants import (
     SMALL_SQUARE_TIME_SEC,
@@ -191,7 +193,8 @@ class ECGSegmentGenerator:
         noise = noise_amplitude * np.random.normal(0, 1, len(signal))
         return signal + noise
     
-    def plot_segment_isolation(self, time, signal, segment_name, save_filename=None):
+    def plot_segment_isolation(self, time, signal, segment_name,
+                               save_filename=None, output_dir=None):
         """Plot segment in isolation with grid for validation."""
         fig, ax = plt.subplots(figsize=(12, 8))
         
@@ -240,9 +243,10 @@ class ECGSegmentGenerator:
         plt.tight_layout()
         
         if save_filename:
-            plt.savefig(f'outputs/{save_filename}', 
-                       dpi=300, bbox_inches='tight')
-            print(f"✅ {segment_name} isolation test saved as '{save_filename}'")
+            out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
+            out_path = out_dir / save_filename
+            plt.savefig(out_path, dpi=300, bbox_inches='tight')
+            print(f"✅ {segment_name} isolation test saved as '{out_path}'")
         
         return fig, ax
     

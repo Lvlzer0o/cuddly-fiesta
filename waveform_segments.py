@@ -12,6 +12,8 @@ import numpy as np
 from ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore
 from typing import Tuple
 import matplotlib.pyplot as plt
+import os
+from pathlib import Path
 
 class PWave(WaveformSegment):
     """P-wave segment with clinical accuracy."""
@@ -168,7 +170,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         return pattern
 
 
-def demo_modular_segments():
+def demo_modular_segments(output_dir=None):
     """Demonstrate modular waveform segments."""
     print("🧩 Modular Waveform Segments Demo")
     print("="*50)
@@ -204,11 +206,12 @@ def demo_modular_segments():
            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgreen', alpha=0.8))
     
     plt.tight_layout()
-    plt.savefig('outputs/modular_segments_demo.png', 
-               dpi=300, bbox_inches='tight')
+    out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
+    out_path = out_dir / 'modular_segments_demo.png'
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
-    print("✅ Modular segments demo saved as 'modular_segments_demo.png'")
+
+    print(f"✅ Modular segments demo saved as '{out_path}'")
 
 
 def demo_arrhythmia_pattern_swap():
@@ -244,7 +247,8 @@ def demo_arrhythmia_pattern_swap():
 
 def main():
     """Main demonstration of modular ECG architecture."""
-    demo_modular_segments()
+    output_dir = Path(os.getenv("OUTPUT_DIR", "."))
+    demo_modular_segments(output_dir=output_dir)
     demo_arrhythmia_pattern_swap()
     
     print("\\n🎯 Modular Architecture Benefits:")
