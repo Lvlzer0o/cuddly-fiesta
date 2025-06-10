@@ -32,4 +32,5 @@ py-modules = [
     "p_wave_summary",
     "verify_improvements",
     "waveform_segments",
+    "grid_constants",
 ]
