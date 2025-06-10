@@ -29,6 +29,14 @@
     └── modular_segments_demo.png
 ```
 
+## Installation
+
+```bash
+python -m venv ecg_env
+source ecg_env/bin/activate
+pip install -r requirements.txt
+```
+
 ## 🧩 Architecture Components
 
 ### 1. **GridScaling Class** (Immutable)
