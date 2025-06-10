@@ -17,16 +17,27 @@
 ## 📁 File Structure
 
 ```
-/Users/trentoncadena/Desktop/maybewithpython/
+.
 ├── ecg_baseline.py              # Original baseline with clinical markers
 ├── ecg_core.py                  # Core architecture with immutable grid
 ├── waveform_segments.py         # Example P-wave & QRS modules
 ├── requirements.txt             # Dependencies
-├── ecg_env/                     # Virtual environment
-└── Generated plots:
+└── docs/                        # Generated plots (not tracked)
     ├── ecg_baseline_demo.png
     ├── ecg_modular_architecture.png
     └── modular_segments_demo.png
+```
+
+### Generating Plots Locally
+
+Run the provided example scripts to create the images under `docs/`:
+
+```bash
+python ecg_baseline.py          # creates docs/ecg_baseline_demo.png
+python waveform_segments.py     # creates docs/modular_segments_demo.png
+python p_wave_generator.py      # creates docs/p_wave_clinical_demo.png and p_wave_isolation_test.png
+python verify_improvements.py   # creates docs/calibration_verification.png and docs/clinical_markers_verification.png
+python test_p_wave_fixes.py     # creates docs/p_wave_physiological_verification.png
 ```
 
 ## 🧩 Architecture Components
