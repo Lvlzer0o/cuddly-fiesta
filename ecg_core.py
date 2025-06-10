@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional
 import warnings
+import os
+from pathlib import Path
 from grid_constants import (
     PAPER_SPEED_MM_PER_SEC,
     VOLTAGE_SCALE_MM_PER_MV,
@@ -336,11 +338,12 @@ def main():
            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightblue', alpha=0.8))
     
     plt.tight_layout()
-    plt.savefig('outputs/ecg_modular_architecture.png', 
-               dpi=300, bbox_inches='tight')
+    out_dir = Path(os.getenv("OUTPUT_DIR", "."))
+    out_path = out_dir / 'ecg_modular_architecture.png'
+    plt.savefig(out_path, dpi=300, bbox_inches='tight')
     plt.close()
-    
-    print("✅ Modular architecture demo saved as 'ecg_modular_architecture.png'")
+
+    print(f"✅ Modular architecture demo saved as '{out_path}'")
     print("\\n🎯 Ready for waveform segment development!")
     print("   Next: Implement PWave, QRSComplex, TWave modules")
 
