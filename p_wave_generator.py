@@ -13,6 +13,8 @@ P-WAVE SPECIFICATIONS:
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
+import os
+from pathlib import Path
 from clinical_validator import ECGSegmentGenerator, ClinicalValidator
 
 class PWaveGenerator(ECGSegmentGenerator):
@@ -187,7 +189,7 @@ class PWaveGenerator(ECGSegmentGenerator):
         
         return p_wave
     
-    def test_isolation(self, save_plot=True):
+    def test_isolation(self, save_plot=True, output_dir=None):
         """Test P-wave in isolation with comprehensive validation."""
         print(f"\n🔬 P-WAVE ISOLATION TEST")
         print("=" * 50)
@@ -205,10 +207,11 @@ class PWaveGenerator(ECGSegmentGenerator):
         # Plot in isolation
         if save_plot:
             fig, ax = self.plot_segment_isolation(
-                p_wave_data['time'], 
+                p_wave_data['time'],
                 p_wave_data['voltage'],
                 'P-Wave',
-                'p_wave_isolation_test.png'
+                'p_wave_isolation_test.png',
+                output_dir=output_dir
             )
             plt.close()
         
@@ -253,7 +256,7 @@ class PWaveGenerator(ECGSegmentGenerator):
             'baseline_data': baseline.get_baseline_data()
         }
     
-    def plot_with_baseline(self, save_filename='p_wave_with_baseline.png'):
+    def plot_with_baseline(self, save_filename='p_wave_with_baseline.png', output_dir=None):
         """Plot P-wave on calibrated baseline with full ECG formatting."""
         combined_data = self.generate_with_baseline()
         
@@ -301,11 +304,12 @@ class PWaveGenerator(ECGSegmentGenerator):
         plt.tight_layout()
         
         # Save plot
-        plt.savefig(f'/Users/trentoncadena/Desktop/maybewithpython/{save_filename}', 
-                   dpi=300, bbox_inches='tight')
+        out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
+        out_path = out_dir / save_filename
+        plt.savefig(out_path, dpi=300, bbox_inches='tight')
         plt.close()
-        
-        print(f"✅ P-wave with baseline saved as '{save_filename}'")
+
+        print(f"✅ P-wave with baseline saved as '{out_path}'")
 
 
 def main():
@@ -314,16 +318,17 @@ def main():
     print("="*60)
     
     # Create P-wave generator (no noise for pure testing)
+    output_dir = Path(os.getenv("OUTPUT_DIR", "."))
     p_gen = PWaveGenerator(sampling_rate=1000, enable_noise=False)
     
     # Test in isolation first (REQUIRED)
-    p_wave_data, validation_passed = p_gen.test_isolation(save_plot=True)
+    p_wave_data, validation_passed = p_gen.test_isolation(save_plot=True, output_dir=output_dir)
     
     if validation_passed:
         print("\n✅ P-wave passed isolation testing!")
         
         # Generate with baseline for visual verification
-        p_gen.plot_with_baseline('p_wave_clinical_demo.png')
+        p_gen.plot_with_baseline('p_wave_clinical_demo.png', output_dir=output_dir)
         
         print("\n🎯 P-Wave Generation Complete!")
         print("📁 Files created:")
