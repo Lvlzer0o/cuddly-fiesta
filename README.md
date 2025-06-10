@@ -14,10 +14,14 @@
 - Grid/baseline logic is reusable foundation
 - Easy to add new arrhythmias
 
+Most save/plot functions accept an optional `output_dir` argument so you can
+control where generated images are written. By default they save to the current
+working directory.
+
 ## 📁 File Structure
 
 ```
-/Users/trentoncadena/Desktop/maybewithpython/
+your_output_directory/
 ├── ecg_baseline.py              # Original baseline with clinical markers
 ├── ecg_core.py                  # Core architecture with immutable grid
 ├── waveform_segments.py         # Example P-wave & QRS modules

@@ -8,8 +8,9 @@ Quick verification of ECG baseline improvements:
 from ecg_baseline import ECGBaseline
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
-def verify_calibration_pulse():
+def verify_calibration_pulse(output_dir: str = '.'):
     """Verify the calibration pulse is a perfect rectangle."""
     print("🔍 Verifying Calibration Pulse...")
     
@@ -39,13 +40,13 @@ def verify_calibration_pulse():
                fontsize=10, color='green', weight='bold')
     
     plt.tight_layout()
-    plt.savefig('/Users/trentoncadena/Desktop/maybewithpython/calibration_verification.png', 
-               dpi=300, bbox_inches='tight')
+    output_path = Path(output_dir) / 'calibration_verification.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("✅ Calibration pulse verification saved as 'calibration_verification.png'")
+    print(f"✅ Calibration pulse verification saved as '{output_path}'")
 
-def verify_clinical_markers():
+def verify_clinical_markers(output_dir: str = '.'):
     """Verify the clinical ECG markers are properly positioned."""
     print("🔍 Verifying Clinical Markers...")
     
@@ -65,11 +66,11 @@ def verify_clinical_markers():
                 fontsize=14, fontweight='bold')
     
     plt.tight_layout()
-    plt.savefig('/Users/trentoncadena/Desktop/maybewithpython/clinical_markers_verification.png', 
-               dpi=300, bbox_inches='tight')
+    output_path = Path(output_dir) / 'clinical_markers_verification.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("✅ Clinical markers verification saved as 'clinical_markers_verification.png'")
+    print(f"✅ Clinical markers verification saved as '{output_path}'")
 
 def show_timing_verification():
     """Show that calibration pulse timing is correct."""
@@ -99,14 +100,14 @@ def show_timing_verification():
     else:
         print("❌ Calibration pulse duration is incorrect!")
 
-def main():
+def main(output_dir: str = '.'):
     """Run all verification tests."""
     print("🏥 ECG Baseline Clinical Verification\n" + "="*50)
     
-    verify_calibration_pulse()
+    verify_calibration_pulse(output_dir=output_dir)
     print()
     
-    verify_clinical_markers() 
+    verify_clinical_markers(output_dir=output_dir)
     print()
     
     show_timing_verification()

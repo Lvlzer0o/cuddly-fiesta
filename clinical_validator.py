@@ -15,6 +15,8 @@ NOTE: All amplitudes are relative to R-wave = 1.0mV (standard calibration).
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
+from pathlib import Path
+from typing import Optional
 from ecg_baseline import ECGBaseline
 
 # Reference constants for clinical ECG standards
@@ -185,7 +187,9 @@ class ECGSegmentGenerator:
         noise = noise_amplitude * np.random.normal(0, 1, len(signal))
         return signal + noise
     
-    def plot_segment_isolation(self, time, signal, segment_name, save_filename=None):
+    def plot_segment_isolation(self, time, signal, segment_name,
+                               save_filename: Optional[str] = None,
+                               output_dir: str = '.'):
         """Plot segment in isolation with grid for validation."""
         fig, ax = plt.subplots(figsize=(12, 8))
         
@@ -234,9 +238,9 @@ class ECGSegmentGenerator:
         plt.tight_layout()
         
         if save_filename:
-            plt.savefig(f'/Users/trentoncadena/Desktop/maybewithpython/{save_filename}', 
-                       dpi=300, bbox_inches='tight')
-            print(f"✅ {segment_name} isolation test saved as '{save_filename}'")
+            output_path = Path(output_dir) / save_filename
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            print(f"✅ {segment_name} isolation test saved as '{output_path}'")
         
         return fig, ax
     

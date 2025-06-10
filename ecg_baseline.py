@@ -12,6 +12,7 @@ Standard ECG Parameters:
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from pathlib import Path
 
 class ECGBaseline:
     def __init__(self, duration_sec=10, sampling_rate=1000):
@@ -235,16 +236,17 @@ class ECGBaseline:
             }
         }
     
-    def save_plot(self, filename='ecg_baseline.png', dpi=300):
+    def save_plot(self, filename: str = 'ecg_baseline.png', dpi: int = 300,
+                  output_dir: str = '.'):
         """Save the baseline plot to file."""
         fig, ax = self.plot_with_grid()
-        plt.savefig(f'/Users/trentoncadena/Desktop/maybewithpython/{filename}', 
-                   dpi=dpi, bbox_inches='tight', facecolor='white')
+        output_path = Path(output_dir) / filename
+        plt.savefig(output_path, dpi=dpi, bbox_inches='tight', facecolor='white')
         plt.close()
-        print(f"Baseline plot saved as {filename}")
+        print(f"Baseline plot saved as {output_path}")
 
 
-def main():
+def main(output_dir: str = '.'):
     """Demonstration of ECG baseline generator."""
     print("Generating ECG Baseline...")
     
@@ -266,7 +268,7 @@ def main():
            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightyellow', alpha=0.8))
     
     # Save the plot
-    ecg_baseline.save_plot('ecg_baseline_demo.png')
+    ecg_baseline.save_plot('ecg_baseline_demo.png', output_dir=output_dir)
     
     # Show baseline statistics
     baseline_data = ecg_baseline.get_baseline_data()

@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional
+from pathlib import Path
 import warnings
 
 class GridScaling:
@@ -295,7 +296,7 @@ class ArrhythmiaPattern(ABC):
             ecg_core.add_waveform_segment(segment, start_time)
 
 
-def main():
+def main(output_dir: str = '.'):
     """Demonstration of modular ECG architecture."""
     print("🏗️  ECG Modular Architecture Demo")
     print("="*50)
@@ -328,11 +329,11 @@ def main():
            bbox=dict(boxstyle='round,pad=0.4', facecolor='lightblue', alpha=0.8))
     
     plt.tight_layout()
-    plt.savefig('/Users/trentoncadena/Desktop/maybewithpython/ecg_modular_architecture.png', 
-               dpi=300, bbox_inches='tight')
+    output_path = Path(output_dir) / 'ecg_modular_architecture.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("✅ Modular architecture demo saved as 'ecg_modular_architecture.png'")
+    print(f"✅ Modular architecture demo saved as '{output_path}'")
     print("\\n🎯 Ready for waveform segment development!")
     print("   Next: Implement PWave, QRSComplex, TWave modules")
 
