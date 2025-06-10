@@ -14,6 +14,8 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
+from clinical_validator import ClinicalValidator
+from scipy.stats import skewnorm
 
 class PWave(WaveformSegment):
     """P-wave segment with clinical accuracy."""
@@ -125,6 +127,40 @@ class QRSComplex(WaveformSegment):
         return time, voltage
 
 
+class TWave(WaveformSegment):
+    """T-wave segment representing ventricular repolarization."""
+
+    def __init__(self, amplitude_mv: float = 0.25, duration_ms: float = 160):
+        """Initialize T-wave with clinical validation."""
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing('T_wave', duration_ms)
+        valid_amp, _ = self._validator.validate_amplitude('T_wave', abs(amplitude_mv))
+
+        if not (valid_timing and valid_amp):
+            raise ValueError(
+                f"T-wave parameters outside clinical range: duration={duration_ms}ms amplitude={amplitude_mv}mV"
+            )
+
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Generate T-wave using skewed Gaussian morphology."""
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples)
+
+        # Normalized time for morphology generation
+        t_norm = np.linspace(0, 1, n_samples)
+
+        # Use scipy skew-normal distribution for asymmetric shape
+        skew = 4 if self.amplitude_mv >= 0 else -4
+        shape = skewnorm.pdf(t_norm, a=skew, loc=0.5, scale=0.2)
+        if shape.max() != 0:
+            shape /= shape.max()
+
+        voltage = self.amplitude_mv * shape
+        return time, voltage
+
 class NormalSinusRhythm(ArrhythmiaPattern):
     """Normal sinus rhythm pattern - modular and swappable."""
     
@@ -152,6 +188,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         # Single heartbeat pattern
         p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
         qrs_complex = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
         
         # Timing for normal sinus rhythm
         pr_interval_sec = 0.16  # 160ms PR interval
@@ -163,10 +200,19 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         })
         
         pattern.append({
-            'segment': qrs_complex, 
+            'segment': qrs_complex,
             'start_time_sec': qrs_start
         })
-        
+
+        # ST segment before T-wave (approx 120ms)
+        st_duration = 0.12
+        t_wave_start = qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
+
+        pattern.append({
+            'segment': t_wave,
+            'start_time_sec': t_wave_start
+        })
+
         return pattern
 
 
@@ -185,6 +231,10 @@ def demo_modular_segments(output_dir=None):
     print("Testing QRS complex module...")
     qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
     ecg.add_waveform_segment(qrs, start_time_sec=1.2)
+
+    print("Testing T-wave module...")
+    t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+    ecg.add_waveform_segment(t_wave, start_time_sec=1.4)
     
     # Validate grid integrity after adding segments
     ecg.validate_grid_integrity()
@@ -197,6 +247,7 @@ def demo_modular_segments(output_dir=None):
         "🧩 Modular Segments Added:\\n"
         "• P-wave: 100ms, 0.15mV\\n"
         "• QRS complex: 100ms, 1.0mV\\n"
+        "• T-wave: 160ms, 0.25mV\\n"
         "• Grid scaling preserved\\n"
         "• Modules are swappable"
     )

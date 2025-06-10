@@ -123,7 +123,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
 ### Basic ECG with Manual Segments
 ```python
 from ecg_core import ECGCore
-from waveform_segments import PWave, QRSComplex
+from waveform_segments import PWave, QRSComplex, TWave
 
 # Create ECG foundation
 ecg = ECGCore(duration_sec=5, sampling_rate=1000)
@@ -131,9 +131,11 @@ ecg = ECGCore(duration_sec=5, sampling_rate=1000)
 # Add segments manually
 p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
 qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
 
 ecg.add_waveform_segment(p_wave, start_time_sec=0.5)
 ecg.add_waveform_segment(qrs, start_time_sec=0.8)
+ecg.add_waveform_segment(t_wave, start_time_sec=1.1)
 
 # Always validate!
 ecg.validate_grid_integrity()
