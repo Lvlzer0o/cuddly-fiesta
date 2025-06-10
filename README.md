@@ -29,6 +29,24 @@
     └── modular_segments_demo.png
 ```
 
+## Installation
+
+The project uses a `pyproject.toml` configuration and can be installed with
+`pip`. From the repository root run:
+
+```bash
+pip install .
+```
+
+For development you may prefer an editable install:
+
+```bash
+pip install -e .
+```
+
+This makes the console utilities such as `p-wave-generator` and
+`verify-improvements` available on your PATH.
+
 ## 🧩 Architecture Components
 
 ### 1. **GridScaling Class** (Immutable)
