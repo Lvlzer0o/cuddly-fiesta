@@ -30,7 +30,10 @@
 
 ### Generating Plots Locally
 
-Run the provided example scripts to create the images under `docs/`:
+First, ensure you have installed the necessary dependencies:
+
+```bash
+pip install -r requirements.txt
 
 ```bash
 python ecg_baseline.py          # creates docs/ecg_baseline_demo.png
