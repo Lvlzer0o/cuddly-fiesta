@@ -1,0 +1,17 @@
+# Python artifacts
+*.pyc
+__pycache__/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+.env/
+
+# Output directories
+output/
+outputs/
+build/
+dist/
+
