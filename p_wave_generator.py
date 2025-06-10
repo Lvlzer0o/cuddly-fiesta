@@ -186,8 +186,6 @@ class PWaveGenerator(ECGSegmentGenerator):
             p_wave[-n_win:] *= offset_window[::-1]
         
         return p_wave
-        
-        return p_wave
     
     def test_isolation(self, save_plot=True):
         """Test P-wave in isolation with comprehensive validation."""
