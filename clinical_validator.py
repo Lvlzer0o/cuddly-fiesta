@@ -16,11 +16,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 from ecg_baseline import ECGBaseline
+from grid_constants import (
+    SMALL_SQUARE_TIME_SEC,
+    SMALL_SQUARE_VOLTAGE_MV,
+    LARGE_SQUARE_TIME_SEC,
+    LARGE_SQUARE_VOLTAGE_MV,
+)
 
 # Reference constants for clinical ECG standards
 REFERENCE_R_WAVE_MV = 1.0  # Standard calibration reference (1.0mV = 10mm)
-GRID_TIME_STEP_MS = 40    # Smallest time division (1mm = 40ms at 25mm/s)
-GRID_VOLTAGE_STEP_MV = 0.1  # Smallest voltage division (1mm = 0.1mV)
+GRID_TIME_STEP_MS = int(SMALL_SQUARE_TIME_SEC * 1000)
+GRID_VOLTAGE_STEP_MV = SMALL_SQUARE_VOLTAGE_MV
 FLOATING_POINT_TOLERANCE = 1e-6  # For floating-point comparisons
 
 class ClinicalValidator:

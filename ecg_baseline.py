@@ -12,6 +12,14 @@ Standard ECG Parameters:
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from grid_constants import (
+    PAPER_SPEED_MM_PER_SEC,
+    VOLTAGE_SCALE_MM_PER_MV,
+    SMALL_SQUARE_TIME_SEC,
+    SMALL_SQUARE_VOLTAGE_MV,
+    LARGE_SQUARE_TIME_SEC,
+    LARGE_SQUARE_VOLTAGE_MV,
+)
 
 class ECGBaseline:
     def __init__(self, duration_sec=10, sampling_rate=1000):
@@ -29,15 +37,15 @@ class ECGBaseline:
         self.sampling_rate = sampling_rate
         self.n_samples = int(duration_sec * sampling_rate)
         
-        # Standard ECG scaling
-        self.paper_speed_mm_per_sec = 25  # 25 mm/sec
-        self.voltage_scale_mm_per_mv = 10  # 10 mm/mV
-        
+        # Standard ECG scaling sourced from shared constants
+        self.paper_speed_mm_per_sec = PAPER_SPEED_MM_PER_SEC
+        self.voltage_scale_mm_per_mv = VOLTAGE_SCALE_MM_PER_MV
+
         # Grid dimensions
-        self.small_square_time_sec = 0.04  # 1mm = 0.04 sec
-        self.small_square_voltage_mv = 0.1  # 1mm = 0.1 mV
-        self.large_square_time_sec = 0.2   # 5mm = 0.2 sec
-        self.large_square_voltage_mv = 0.5  # 5mm = 0.5 mV
+        self.small_square_time_sec = SMALL_SQUARE_TIME_SEC
+        self.small_square_voltage_mv = SMALL_SQUARE_VOLTAGE_MV
+        self.large_square_time_sec = LARGE_SQUARE_TIME_SEC
+        self.large_square_voltage_mv = LARGE_SQUARE_VOLTAGE_MV
         
         # Generate time array
         self.time = np.linspace(0, duration_sec, self.n_samples)
