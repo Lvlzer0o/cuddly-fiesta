@@ -1,6 +1,6 @@
 """Multi-lead ECG utilities."""
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 import matplotlib.pyplot as plt
 import csv
 
@@ -10,11 +10,24 @@ from .ecg_core import ECGCore
 
 
 class MultiLeadECG:
-    """Generate a simple 12-lead ECG from an ``ECGCore`` instance."""
+    """Generate a simple 12-lead ECG from an ``ECGCore`` instance.
 
-    def __init__(self, ecg: ECGCore):
+    Parameters
+    ----------
+    ecg : ECGCore
+        Base ECG used for all leads.
+    lead_params : dict, optional
+        Per-lead parameters such as amplitude scaling.  Each entry is
+        ``{"scale": float}`` and will be applied to the generated lead
+        voltages.
+    """
+
+    def __init__(
+        self, ecg: ECGCore, lead_params: Optional[Dict[str, Dict[str, float]]] = None
+    ):
         self.ecg = ecg
         self.time = ecg.time
+        self.lead_params = lead_params or {}
         self._generate_leads()
 
     def _generate_leads(self) -> None:
@@ -43,13 +56,20 @@ class MultiLeadECG:
         for i, factor in enumerate(chest_factors, start=1):
             leads[f"V{i}"] = factor * base - wct
 
+        # Apply optional per-lead scaling factors
+        for name, params in self.lead_params.items():
+            if name in leads and "scale" in params:
+                leads[name] = params["scale"] * leads[name]
+
         self.leads = leads
 
     def get_lead(self, name: str):
         """Return the voltage array for the specified lead."""
         return self.leads[name]
 
-    def plot_all_leads(self, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False):
+    def plot_all_leads(
+        self, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False
+    ):
         """Plot all 12 leads in a 4x3 grid.
 
         Parameters
@@ -60,7 +80,20 @@ class MultiLeadECG:
             If ``True`` overlay a clinical ECG grid on each subplot.
         """
         fig, axes = plt.subplots(4, 3, figsize=figure_size, sharex=True, sharey=True)
-        order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+        order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVL",
+            "aVF",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
 
         for ax, name in zip(axes.ravel(), order):
             ax.plot(self.time, self.leads[name], "k", linewidth=1)
@@ -72,15 +105,19 @@ class MultiLeadECG:
             ax.axhline(0, color="gray", linewidth=0.5)
             if with_grid:
                 # Reuse a single ECGBaseline instance for grid plotting
-                if not hasattr(self, '_baseline_grid_helper'):
-                    self._baseline_grid_helper = ECGBaseline(self.ecg.duration_sec, self.ecg.sampling_rate)
+                if not hasattr(self, "_baseline_grid_helper"):
+                    self._baseline_grid_helper = ECGBaseline(
+                        self.ecg.duration_sec, self.ecg.sampling_rate
+                    )
                 self._baseline_grid_helper._add_ecg_grid(ax)
 
         fig.suptitle("12-Lead ECG", fontsize=14, fontweight="bold")
         plt.tight_layout()
         return fig, axes
 
-    def save_plot(self, path: str, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False) -> None:
+    def save_plot(
+        self, path: str, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False
+    ) -> None:
         """Save the multi-lead plot to ``path``."""
         fig, _ = self.plot_all_leads(figure_size=figure_size, with_grid=with_grid)
         plt.savefig(path, dpi=300, bbox_inches="tight")
@@ -88,7 +125,20 @@ class MultiLeadECG:
 
     def export_to_csv(self, path: str) -> None:
         """Export all leads to a CSV file for analysis."""
-        order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+        order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVL",
+            "aVF",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
         with open(path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["time"] + order)

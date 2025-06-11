@@ -38,13 +38,13 @@ def run_all() -> None:
     # Demonstrate waveform segment modules
     waveform_segments.demo_modular_segments()
     waveform_segments.demo_arrhythmia_pattern_swap()
-    
+
     # Run additional demo modules
     p_wave_generator.main()
     waveform_segments.main()
 
     # Clinical verification and summaries
-    verify_improvements.main()
+    verify_improvements_main()
     print_p_wave_summary()
 
     logging.info("Demo suite complete")
@@ -64,7 +64,7 @@ def health_check() -> bool:
     pattern = NormalSinusRhythm(heart_rate_bpm=60)
     pattern.apply_to_ecg(ecg)
     ok = ecg.validate_grid_integrity()
-    
+
     # Also check the clinical validator
     try:
         ClinicalValidator()
@@ -84,7 +84,7 @@ def health_check() -> bool:
 def report() -> None:
     """Generate and print a summary report of library status."""
     print_p_wave_summary()
-    
+
 
 def generate_report(output_path: str = "agents_report.txt") -> Path:
     """Generate a short text report summarizing library status."""

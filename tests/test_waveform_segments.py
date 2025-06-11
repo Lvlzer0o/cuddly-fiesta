@@ -1,5 +1,6 @@
 import unittest
 import matplotlib
+
 matplotlib.use("Agg")
 
 from cuddly_fiesta.clinical_validator import ClinicalValidator
@@ -22,17 +23,25 @@ class TestWaves(unittest.TestCase):
 
     def test_twave_defaults(self):
         tw = TWave()
-        valid_timing, msg_timing = self.validator.validate_timing("T_wave", tw.duration_ms)
+        valid_timing, msg_timing = self.validator.validate_timing(
+            "T_wave", tw.duration_ms
+        )
         self.assertTrue(valid_timing, msg_timing)
-        valid_amp, msg_amp = self.validator.validate_amplitude("T_wave", abs(tw.amplitude_mv))
+        valid_amp, msg_amp = self.validator.validate_amplitude(
+            "T_wave", abs(tw.amplitude_mv)
+        )
         self.assertTrue(valid_amp, msg_amp)
         self.assertTrue(self.grid.validate_timing(tw.duration_ms))
 
     def test_uwave_defaults(self):
         uw = UWave()
-        valid_timing, msg_timing = self.validator.validate_timing("U_wave", uw.duration_ms)
+        valid_timing, msg_timing = self.validator.validate_timing(
+            "U_wave", uw.duration_ms
+        )
         self.assertTrue(valid_timing, msg_timing)
-        valid_amp, msg_amp = self.validator.validate_amplitude("U_wave", abs(uw.amplitude_mv))
+        valid_amp, msg_amp = self.validator.validate_amplitude(
+            "U_wave", abs(uw.amplitude_mv)
+        )
         self.assertTrue(valid_amp, msg_amp)
         self.assertTrue(self.grid.validate_timing(uw.duration_ms))
 
@@ -43,9 +52,15 @@ class TestArrhythmiaPatterns(unittest.TestCase):
         pattern.apply_to_ecg(ecg)
         grid = GridScaling()
         for info in ecg.segments_added:
-            self.assertTrue(grid.validate_timing(info["start_time"] * 1000), f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned")
+            self.assertTrue(
+                grid.validate_timing(info["start_time"] * 1000),
+                f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned",
+            )
             seg = info["segment"]
-            self.assertTrue(grid.validate_timing(seg.duration_ms), f"Segment {seg.__class__.__name__} duration {seg.duration_ms}ms not grid aligned")
+            self.assertTrue(
+                grid.validate_timing(seg.duration_ms),
+                f"Segment {seg.__class__.__name__} duration {seg.duration_ms}ms not grid aligned",
+            )
 
     def test_all_patterns_grid_alignment(self):
         self._check_pattern(NormalSinusRhythm())
@@ -61,6 +76,15 @@ class TestMultiLeadAndAnimation(unittest.TestCase):
         self.assertEqual(len(ml.leads), 12)
         for lead in ml.leads.values():
             self.assertEqual(len(lead), len(ecg.time))
+
+    def test_multi_lead_scaling(self):
+        ecg = ECGCore(duration_sec=1, sampling_rate=1000)
+        NormalSinusRhythm().apply_to_ecg(ecg)
+        ml_base = MultiLeadECG(ecg)
+        ml_scaled = MultiLeadECG(ecg, lead_params={"II": {"scale": 2.0}})
+        self.assertAlmostEqual(
+            ml_scaled.leads["II"][100], ml_base.leads["II"][100] * 2.0, places=6
+        )
 
     def test_animation_smoke(self):
         ecg = ECGCore(duration_sec=1, sampling_rate=1000)
