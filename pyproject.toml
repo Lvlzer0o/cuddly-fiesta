@@ -33,4 +33,5 @@ py-modules = [
     "verify_improvements",
     "waveform_segments",
     "grid_constants",
+    "multi_lead",
 ]

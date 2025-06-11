@@ -223,7 +223,7 @@ The architecture ensures clinical accuracy while maintaining code modularity for
 
 ## Running Tests
 
-Install requirements and run the test suite using `pytest`:
+Install requirements and run the test suite using `pytest` (the same command used in CI):
 
 ```bash
 python -m pip install -r requirements.txt

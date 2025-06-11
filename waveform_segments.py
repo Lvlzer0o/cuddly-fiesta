@@ -9,7 +9,7 @@ This file shows how to create plug-and-play waveform modules that:
 """
 
 import numpy as np
-from ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore
+from ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore, GridScaling
 from typing import Tuple
 import matplotlib.pyplot as plt
 import os
@@ -158,6 +158,30 @@ class TWave(WaveformSegment):
         if shape.max() != 0:
             shape /= shape.max()
 
+        voltage = self.amplitude_mv * shape
+        return time, voltage
+
+
+class UWave(WaveformSegment):
+    """Simplified U-wave segment."""
+
+    def __init__(self, amplitude_mv: float = 0.1, duration_ms: float = 80):
+        grid = GridScaling()
+        if not grid.validate_timing(duration_ms):
+            raise ValueError(
+                f"U-wave duration {duration_ms}ms outside grid alignment")
+        if not grid.validate_amplitude(abs(amplitude_mv)):
+            raise ValueError(
+                f"U-wave amplitude {amplitude_mv}mV outside grid alignment")
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+        t_norm = np.linspace(-1, 1, n_samples)
+        shape = np.exp(-0.5 * (t_norm / 0.3) ** 2)
+        if shape.max() != 0:
+            shape /= shape.max()
         voltage = self.amplitude_mv * shape
         return time, voltage
 
