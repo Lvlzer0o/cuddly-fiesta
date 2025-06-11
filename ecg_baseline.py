@@ -103,22 +103,22 @@ class ECGBaseline:
         
         # Plot baseline
         ax.plot(self.time, self.baseline, 'k-', linewidth=1.2, label='Baseline')
-        
-        # Add ECG grid
+
+        # Set axis limits with some padding
+        ax.set_xlim(0, self.duration_sec)
+        ax.set_ylim(-2, 2)  # Standard ECG viewport
+
+        # Add ECG grid after limits are established
         self._add_ecg_grid(ax)
-        
+
         # Add calibration pulse if requested
         if show_calibration:
             self._add_calibration_pulse(ax)
-        
+
         # Set axis properties
         ax.set_xlabel('Time (seconds)', fontsize=12)
         ax.set_ylabel('Voltage (mV)', fontsize=12)
         ax.set_title('ECG Baseline - Standard 25mm/sec, 10mm/mV', fontsize=14, fontweight='bold')
-        
-        # Set axis limits with some padding
-        ax.set_xlim(0, self.duration_sec)
-        ax.set_ylim(-2, 2)  # Standard ECG viewport
         
         # Remove default grid
         ax.grid(False)

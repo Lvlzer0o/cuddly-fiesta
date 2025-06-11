@@ -2,6 +2,9 @@
 
 from typing import Dict, Tuple
 import matplotlib.pyplot as plt
+import csv
+
+from ecg_baseline import ECGBaseline
 
 from ecg_core import ECGCore
 
@@ -46,8 +49,16 @@ class MultiLeadECG:
         """Return the voltage array for the specified lead."""
         return self.leads[name]
 
-    def plot_all_leads(self, figure_size: Tuple[int, int] = (12, 8)):
-        """Plot all 12 leads in a 4x3 grid."""
+    def plot_all_leads(self, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False):
+        """Plot all 12 leads in a 4x3 grid.
+
+        Parameters
+        ----------
+        figure_size : tuple
+            Size of the figure.
+        with_grid : bool
+            If ``True`` overlay a clinical ECG grid on each subplot.
+        """
         fig, axes = plt.subplots(4, 3, figsize=figure_size, sharex=True, sharey=True)
         order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
 
@@ -59,10 +70,28 @@ class MultiLeadECG:
             ax.set_xticks([])
             ax.set_yticks([])
             ax.axhline(0, color="gray", linewidth=0.5)
+            if with_grid:
+                ECGBaseline(self.ecg.duration_sec, self.ecg.sampling_rate)._add_ecg_grid(ax)
 
         fig.suptitle("12-Lead ECG", fontsize=14, fontweight="bold")
         plt.tight_layout()
         return fig, axes
+
+    def save_plot(self, path: str, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False) -> None:
+        """Save the multi-lead plot to ``path``."""
+        fig, _ = self.plot_all_leads(figure_size=figure_size, with_grid=with_grid)
+        plt.savefig(path, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+    def export_to_csv(self, path: str) -> None:
+        """Export all leads to a CSV file for analysis."""
+        order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+        with open(path, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["time"] + order)
+            for idx, t in enumerate(self.time):
+                row = [t] + [self.leads[name][idx] for name in order]
+                writer.writerow(row)
 
 
 def main():
