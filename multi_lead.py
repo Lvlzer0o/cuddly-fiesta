@@ -71,7 +71,10 @@ class MultiLeadECG:
             ax.set_yticks([])
             ax.axhline(0, color="gray", linewidth=0.5)
             if with_grid:
-                ECGBaseline(self.ecg.duration_sec, self.ecg.sampling_rate)._add_ecg_grid(ax)
+                # Reuse a single ECGBaseline instance for grid plotting
+                if not hasattr(self, '_baseline_grid_helper'):
+                    self._baseline_grid_helper = ECGBaseline(self.ecg.duration_sec, self.ecg.sampling_rate)
+                self._baseline_grid_helper._add_ecg_grid(ax)
 
         fig.suptitle("12-Lead ECG", fontsize=14, fontweight="bold")
         plt.tight_layout()
