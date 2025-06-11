@@ -277,11 +277,12 @@ class WaveformSegment(ABC):
 
 
 class ArrhythmiaPattern(ABC):
-    """Abstract base class for arrhythmia patterns - modular and swappable."""
-    
-    def __init__(self, name: str):
+    """Abstract base class for arrhythmia patterns."""
+
+    def __init__(self, name: str, lead_modifiers: Optional[Dict[str, Dict]] = None):
         self.name = name
         self.segments = []
+        self.lead_modifiers = lead_modifiers or {}
     
     @abstractmethod
     def define_pattern(self) -> List[Dict]:
@@ -303,6 +304,9 @@ class ArrhythmiaPattern(ABC):
             segment = segment_def['segment']
             start_time = segment_def['start_time_sec']
             ecg_core.add_waveform_segment(segment, start_time)
+
+        # Attach lead modifier information for multi-lead generation
+        ecg_core.lead_modifiers = self.lead_modifiers
 
 
 def main():
