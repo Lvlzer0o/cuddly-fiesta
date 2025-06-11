@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from p_wave_generator import PWaveGenerator
+from cuddly_fiesta.p_wave_generator import PWaveGenerator
 
 
 class TestPWaveGenerator(unittest.TestCase):

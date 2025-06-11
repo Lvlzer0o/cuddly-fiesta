@@ -2,17 +2,17 @@ import unittest
 import matplotlib
 matplotlib.use("Agg")
 
-from clinical_validator import ClinicalValidator
-from ecg_core import ECGCore, GridScaling
-from waveform_segments import (
+from cuddly_fiesta.clinical_validator import ClinicalValidator
+from cuddly_fiesta.ecg_core import ECGCore, GridScaling
+from cuddly_fiesta.waveform_segments import (
     TWave,
     UWave,
     NormalSinusRhythm,
     AtrialFibrillation,
     VentricularTachycardia,
 )
-from multi_lead import MultiLeadECG
-from ecg_animation import animate_ecg
+from cuddly_fiesta.multi_lead import MultiLeadECG
+from cuddly_fiesta.ecg_animation import animate_ecg
 
 
 class TestWaves(unittest.TestCase):

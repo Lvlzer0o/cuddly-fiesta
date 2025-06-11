@@ -1,0 +1,1 @@
+"""Core ECG generation package."""
