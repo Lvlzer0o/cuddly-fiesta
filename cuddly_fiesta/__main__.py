@@ -40,7 +40,7 @@ def _cmd_agent_run_all(_args: argparse.Namespace) -> None:
     agents.run_all()
 
 
-def main(argv=None) -> None:
+def main(argv: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser(prog="cuddly_fiesta", description="ECG generator utilities")
     sub = parser.add_subparsers(dest="command", required=True)
 
