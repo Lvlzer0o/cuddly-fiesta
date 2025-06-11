@@ -117,6 +117,9 @@ class NormalSinusRhythm(ArrhythmiaPattern):
 - Same core modules, different arrangements
 - Easy to create new arrhythmias
 - Grid scaling always preserved
+- Implemented patterns: Normal Sinus Rhythm, Atrial Fibrillation,
+  Ventricular Tachycardia, Premature Ventricular Contraction,
+  Second Degree AV Block, and Atrial Flutter
 
 ## 🔧 Usage Examples
 
@@ -212,18 +215,10 @@ Pass `--multi` to animate a 12‑lead display generated via `MultiLeadECG`.
 
 ## 📈 Next Steps
 
-Ready to implement:
-1. **T-wave module** with asymmetric morphology
-2. **U-wave module** (optional)
-3. **Complex arrhythmias**: 
-   - Atrial fibrillation
-   - Ventricular tachycardia  
-   - Heart blocks
-   - Premature beats
-4. **Advanced features**:
-   - Rate variability
-   - Axis deviation
-   - Multi-lead support
+Additional features under development:
+1. **Advanced rate variability**
+2. **Axis deviation tools**
+3. **Multi-lead support**
 
 ## 🔍 Validation Output Example
 ```
