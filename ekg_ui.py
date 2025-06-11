@@ -48,17 +48,19 @@ class MultiLeadECG:
             pattern.apply_to_ecg(core)
         self.index = 0
 
-    def step(self, num_samples: int) -> tuple[np.ndarray, List[np.ndarray]]:
-        """Return the next chunk of samples for all leads."""
+    def step(self, num_samples: int) -> tuple[np.ndarray, List[np.ndarray], bool]:
+        """Return the next chunk of samples for all leads and if data looped."""
+        looped = False
         start = self.index
         end = min(start + num_samples, self.n_samples)
         self.index = end
         if end >= self.n_samples:
             self.index = 0
+            looped = True
 
         time = self.leads[0].time[start:end]
         voltages = [lead.voltage[start:end] for lead in self.leads]
-        return time, voltages
+        return time, voltages, looped
 
 
 class ECGGui(tk.Tk):
