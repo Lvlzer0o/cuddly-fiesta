@@ -32,7 +32,7 @@ class ECGGui:
         self.pattern_name = tk.StringVar(value="Normal Sinus Rhythm")
         self.highlight_lead = tk.StringVar(value="None")
 
-        self.pattern_classes: Dict[str, Type] = {
+        self.pattern_classes: Dict[str, Type[ArrhythmiaPattern]] = {
             "Normal Sinus Rhythm": NormalSinusRhythm,
             "Atrial Fibrillation": AtrialFibrillation,
             "Ventricular Tachycardia": VentricularTachycardia,
