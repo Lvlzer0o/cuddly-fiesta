@@ -10,7 +10,7 @@ This file shows how to create plug-and-play waveform modules that:
 
 import numpy as np
 from .ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore
-from typing import Tuple
+from typing import Tuple, Dict, Optional
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
@@ -173,6 +173,28 @@ class TWave(WaveformSegment):
         return time, voltage
 
 
+class LeadQRSComplex(QRSComplex):
+    """QRS complex scaled for a specific lead orientation."""
+
+    def __init__(self, lead: str, amplitude_scale: float = 1.0, polarity: float = 1.0,
+                 axis_deg: float = 0.0, **kwargs):
+        base_amp = kwargs.get("r_amplitude_mv", 1.0) * amplitude_scale * polarity * np.cos(np.radians(axis_deg))
+        kwargs["r_amplitude_mv"] = base_amp
+        super().__init__(**kwargs)
+        self.lead = lead
+
+
+class LeadTWave(TWave):
+    """T-wave scaled for a specific lead orientation."""
+
+    def __init__(self, lead: str, amplitude_scale: float = 1.0, polarity: float = 1.0,
+                 axis_deg: float = 0.0, **kwargs):
+        base_amp = kwargs.get("amplitude_mv", 0.25) * amplitude_scale * polarity * np.cos(np.radians(axis_deg))
+        kwargs["amplitude_mv"] = base_amp
+        super().__init__(**kwargs)
+        self.lead = lead
+
+
 class UWave(WaveformSegment):
     """U-wave segment following ventricular repolarization."""
 
@@ -205,9 +227,9 @@ class UWave(WaveformSegment):
         return time, voltage
 
 class NormalSinusRhythm(ArrhythmiaPattern):
-    """Normal sinus rhythm pattern - modular and swappable."""
-    
-    def __init__(self, heart_rate_bpm: int = 70):
+    """Normal sinus rhythm pattern."""
+
+    def __init__(self, heart_rate_bpm: int = 70, lead_modifiers: Optional[Dict[str, Dict]] = None):
         """
         Initialize normal sinus rhythm.
         
@@ -216,7 +238,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         heart_rate_bpm : int
             Heart rate in beats per minute (60-100 normal)
         """
-        super().__init__("Normal Sinus Rhythm")
+        super().__init__("Normal Sinus Rhythm", lead_modifiers)
         
         if not (50 <= heart_rate_bpm <= 120):
             raise ValueError(f"Heart rate {heart_rate_bpm} outside reasonable range (50-120 bpm)")
@@ -230,8 +252,9 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         
         # Single heartbeat pattern
         p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs_complex = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+        mod = self.lead_modifiers.get('II', {})
+        qrs_complex = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
         
         # Timing for normal sinus rhythm
         pr_interval_sec = 0.16  # 160ms PR interval
@@ -262,8 +285,9 @@ class NormalSinusRhythm(ArrhythmiaPattern):
 class AtrialFibrillation(ArrhythmiaPattern):
     """Simple atrial fibrillation pattern with irregular RR intervals."""
 
-    def __init__(self, heart_rate_bpm: int = 90, duration_sec: float = 3.0):
-        super().__init__("Atrial Fibrillation")
+    def __init__(self, heart_rate_bpm: int = 90, duration_sec: float = 3.0,
+                 lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Atrial Fibrillation", lead_modifiers)
 
         if not (60 <= heart_rate_bpm <= 150):
             raise ValueError(
@@ -280,13 +304,15 @@ class AtrialFibrillation(ArrhythmiaPattern):
         rng = np.random.default_rng(0)
         t = 0.0
 
+        mod = self.lead_modifiers.get('II', {})
         while t < self.duration_sec:
-            qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+            mod = self.lead_modifiers.get('II', {})
+            qrs = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
             qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
             pattern.append({'segment': qrs, 'start_time_sec': qrs_start})
 
             tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
-            t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+            t_wave = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
             tw_start = self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
             pattern.append({'segment': t_wave, 'start_time_sec': tw_start})
 
@@ -304,8 +330,9 @@ class AtrialFibrillation(ArrhythmiaPattern):
 class VentricularTachycardia(ArrhythmiaPattern):
     """Rapid ventricular tachycardia pattern."""
 
-    def __init__(self, heart_rate_bpm: int = 160, duration_sec: float = 3.0):
-        super().__init__("Ventricular Tachycardia")
+    def __init__(self, heart_rate_bpm: int = 160, duration_sec: float = 3.0,
+                 lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Ventricular Tachycardia", lead_modifiers)
 
         if not (120 <= heart_rate_bpm <= 250):
             raise ValueError(
@@ -320,14 +347,19 @@ class VentricularTachycardia(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
+        mod = self.lead_modifiers.get('II', {})
+        mod = self.lead_modifiers.get('II', {})
+        mod = self.lead_modifiers.get('II', {})
+        mod = self.lead_modifiers.get('II', {})
 
         while t < self.duration_sec:
-            qrs = QRSComplex(r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
+            mod = self.lead_modifiers.get('II', {})
+            qrs = LeadQRSComplex('II', **mod, r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
             qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
             pattern.append({'segment': qrs, 'start_time_sec': qrs_start})
 
             tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.08
-            t_wave = TWave(amplitude_mv=-0.2, duration_ms=160)
+            t_wave = LeadTWave('II', **mod, amplitude_mv=-0.2, duration_ms=160)
             tw_start = self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
             pattern.append({'segment': t_wave, 'start_time_sec': tw_start})
 
@@ -339,8 +371,8 @@ class VentricularTachycardia(ArrhythmiaPattern):
 class PrematureVentricularContraction(ArrhythmiaPattern):
     """Isolated premature ventricular contraction with compensatory pause."""
 
-    def __init__(self, heart_rate_bpm: int = 70):
-        super().__init__("Premature Ventricular Contraction")
+    def __init__(self, heart_rate_bpm: int = 70, lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Premature Ventricular Contraction", lead_modifiers)
 
         if not (50 <= heart_rate_bpm <= 120):
             raise ValueError(
@@ -360,8 +392,9 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
 
         # First normal beat
         p1 = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs1 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t1 = TWave(amplitude_mv=0.25, duration_ms=160)
+        mod = self.lead_modifiers.get('II', {})
+        qrs1 = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t1 = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
 
         pattern.append({"segment": p1, "start_time_sec": 0.0})
         pattern.append({"segment": qrs1, "start_time_sec": pr})
@@ -369,14 +402,14 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
         pattern.append({"segment": t1, "start_time_sec": t1_start})
 
         # PVC beat
-        pvc_qrs = QRSComplex(r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
+        pvc_qrs = LeadQRSComplex('II', **mod, r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
         pvc_start = self.rr_interval - self.premature_offset
         pvc_start = self._validator.snap_to_grid_time(pvc_start * 1000) / 1000.0
         pattern.append({"segment": pvc_qrs, "start_time_sec": pvc_start})
 
         pvc_t_start = pvc_start + pvc_qrs.duration_ms / 1000.0 + 0.08
         pvc_t_start = self._validator.snap_to_grid_time(pvc_t_start * 1000) / 1000.0
-        pvc_t = TWave(amplitude_mv=-0.2, duration_ms=160)
+        pvc_t = LeadTWave('II', **mod, amplitude_mv=-0.2, duration_ms=160)
         pattern.append({"segment": pvc_t, "start_time_sec": pvc_t_start})
 
         # Next normal beat after compensatory pause
@@ -390,8 +423,8 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
         next_qrs_start = self._validator.snap_to_grid_time(next_qrs_start_raw * 1000) / 1000.0
 
         p2 = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs2 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t2 = TWave(amplitude_mv=0.25, duration_ms=160)
+        qrs2 = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t2 = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
 
         pattern.append({"segment": p2, "start_time_sec": p2_start})
         pattern.append({"segment": qrs2, "start_time_sec": next_qrs_start})
@@ -405,8 +438,8 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
 class SecondDegreeAVBlock(ArrhythmiaPattern):
     """Simple Mobitz type II second-degree AV block."""
 
-    def __init__(self, heart_rate_bpm: int = 75):
-        super().__init__("Second Degree AV Block")
+    def __init__(self, heart_rate_bpm: int = 75, lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Second Degree AV Block", lead_modifiers)
 
         if not (50 <= heart_rate_bpm <= 100):
             raise ValueError(
@@ -422,9 +455,10 @@ class SecondDegreeAVBlock(ArrhythmiaPattern):
         pr = 0.16
 
         # Beat 1 normal
+        mod = self.lead_modifiers.get('II', {})
         p1 = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs1 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t1 = TWave(amplitude_mv=0.25, duration_ms=160)
+        qrs1 = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t1 = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
         pattern.append({"segment": p1, "start_time_sec": 0.0})
         pattern.append({"segment": qrs1, "start_time_sec": pr})
         t1_start = pr + qrs1.duration_ms / 1000.0 + 0.12
@@ -440,8 +474,8 @@ class SecondDegreeAVBlock(ArrhythmiaPattern):
         qrs3_start = p3_start + pr
         qrs3_start = self._validator.snap_to_grid_time(qrs3_start * 1000) / 1000.0
         p3 = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs3 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t3 = TWave(amplitude_mv=0.25, duration_ms=160)
+        qrs3 = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t3 = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
         pattern.append({"segment": p3, "start_time_sec": p3_start})
         pattern.append({"segment": qrs3, "start_time_sec": qrs3_start})
         t3_start = qrs3_start + qrs3.duration_ms / 1000.0 + 0.12
@@ -454,8 +488,9 @@ class SecondDegreeAVBlock(ArrhythmiaPattern):
 class AtrialFlutter(ArrhythmiaPattern):
     """Atrial flutter with 2:1 conduction pattern."""
 
-    def __init__(self, heart_rate_bpm: int = 150, duration_sec: float = 3.0):
-        super().__init__("Atrial Flutter")
+    def __init__(self, heart_rate_bpm: int = 150, duration_sec: float = 3.0,
+                 lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Atrial Flutter", lead_modifiers)
 
         if not (100 <= heart_rate_bpm <= 180):
             raise ValueError(
@@ -470,6 +505,7 @@ class AtrialFlutter(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
+        mod = self.lead_modifiers.get('II', {})
 
         while t < self.duration_sec:
             # First flutter wave
@@ -490,12 +526,12 @@ class AtrialFlutter(ArrhythmiaPattern):
             if qrs_start >= self.duration_sec:
                 break
             qrs_start = self._validator.snap_to_grid_time(qrs_start * 1000) / 1000.0
-            qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+            qrs = LeadQRSComplex('II', **mod, r_amplitude_mv=1.0, duration_ms=100)
             pattern.append({"segment": qrs, "start_time_sec": qrs_start})
 
             t_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
             t_start = self._validator.snap_to_grid_time(t_start * 1000) / 1000.0
-            t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+            t_wave = LeadTWave('II', **mod, amplitude_mv=0.25, duration_ms=160)
             pattern.append({"segment": t_wave, "start_time_sec": t_start})
 
             t += self.rr_interval

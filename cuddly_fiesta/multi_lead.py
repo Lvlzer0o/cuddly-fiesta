@@ -3,6 +3,7 @@
 from typing import Dict, Tuple
 import matplotlib.pyplot as plt
 import csv
+import numpy as np
 
 from .ecg_baseline import ECGBaseline
 
@@ -20,6 +21,7 @@ class MultiLeadECG:
     def _generate_leads(self) -> None:
         """Create all limb and precordial leads."""
         base = self.ecg.voltage
+        modifiers = getattr(self.ecg, 'lead_modifiers', {})
 
         # Approximate limb potentials
         ra = -0.5 * base
@@ -42,6 +44,14 @@ class MultiLeadECG:
         chest_factors = [-0.5, -0.1, 0.1, 0.5, 0.8, 1.0]
         for i, factor in enumerate(chest_factors, start=1):
             leads[f"V{i}"] = factor * base - wct
+
+        # Apply lead-specific modifiers
+        for name, signal in leads.items():
+            mod = modifiers.get(name, {})
+            scale = mod.get('scale', 1.0)
+            polarity = mod.get('polarity', 1.0)
+            axis = np.cos(np.radians(mod.get('axis_deg', 0.0)))
+            leads[name] = scale * polarity * axis * signal
 
         self.leads = leads
 
