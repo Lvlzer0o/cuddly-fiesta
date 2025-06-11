@@ -621,6 +621,30 @@ def demo_arrhythmia_pattern_swap():
     print("   Grid scaling preserved in both cases")
 
 
+def demo_normal(output_dir=None):
+    """Generate a normal sinus rhythm example plot."""
+    ecg = ECGCore(duration_sec=3, sampling_rate=1000)
+    NormalSinusRhythm(heart_rate_bpm=70).apply_to_ecg(ecg)
+    fig, _ = ecg.plot_with_grid(show_calibration=False)
+    out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
+    out_path = out_dir / "normal_sinus_rhythm_demo.png"
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Normal sinus rhythm demo saved as '{out_path}'")
+
+
+def demo_afib(output_dir=None):
+    """Generate an atrial fibrillation example plot."""
+    ecg = ECGCore(duration_sec=3, sampling_rate=1000)
+    AtrialFibrillation(heart_rate_bpm=90, duration_sec=3.0).apply_to_ecg(ecg)
+    fig, _ = ecg.plot_with_grid(show_calibration=False)
+    out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
+    out_path = out_dir / "atrial_fibrillation_demo.png"
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Atrial fibrillation demo saved as '{out_path}'")
+
+
 def main():
     """Main demonstration of modular ECG architecture."""
     output_dir = Path(os.getenv("OUTPUT_DIR", "."))
