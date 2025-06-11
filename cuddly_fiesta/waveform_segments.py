@@ -173,6 +173,145 @@ class TWave(WaveformSegment):
         return time, voltage
 
 
+class AdvancedQRSComplex(WaveformSegment):
+    """Advanced QRS complex using Gaussian mixtures and raised cosine windows."""
+
+    def __init__(
+        self,
+        r_amplitude_mv: float = 1.0,
+        duration_ms: float = 100,
+        q_ratio: float = 0.2,
+        s_ratio: float = 0.3,
+        skew: float = 0.0,
+        biphasic: bool = False,
+        second_r_ratio: float = 0.5,
+    ):
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing("QRS_complex", duration_ms)
+        valid_r, _ = self._validator.validate_amplitude("R_wave", abs(r_amplitude_mv))
+        valid_q, _ = self._validator.validate_amplitude("Q_wave", abs(r_amplitude_mv * q_ratio))
+        valid_s, _ = self._validator.validate_amplitude("S_wave", abs(r_amplitude_mv * s_ratio))
+
+        if not (valid_timing and valid_r and valid_q and valid_s):
+            raise ValueError(
+                "AdvancedQRSComplex parameters outside clinical range"
+            )
+
+        super().__init__(duration_ms, r_amplitude_mv)
+        self.q_ratio = q_ratio
+        self.s_ratio = s_ratio
+        self.skew = skew
+        self.biphasic = biphasic
+        self.second_r_ratio = second_r_ratio
+
+    def _raised_cosine_window(self, n: int) -> np.ndarray:
+        if n == 0:
+            return np.array([])
+        t = np.linspace(-np.pi / 2, np.pi / 2, n)
+        return 0.5 * (1 + np.sin(t))
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        t_norm = np.linspace(0, 1, n_samples)
+
+        q_center = 0.2 + 0.05 * self.skew
+        r_center = 0.5 + 0.05 * self.skew
+        s_center = 0.8 + 0.05 * self.skew
+
+        q_width = 0.04
+        r_width = 0.05
+        s_width = 0.05
+
+        q_wave = -self.q_ratio * self.amplitude_mv * np.exp(-0.5 * ((t_norm - q_center) / q_width) ** 2)
+        r_wave = self.amplitude_mv * np.exp(-0.5 * ((t_norm - r_center) / r_width) ** 2)
+        s_wave = -self.s_ratio * self.amplitude_mv * np.exp(-0.5 * ((t_norm - s_center) / s_width) ** 2)
+
+        voltage = q_wave + r_wave + s_wave
+
+        if self.biphasic:
+            r2_center = min(1.0, r_center + 0.15)
+            r2_wave = self.second_r_ratio * self.amplitude_mv * np.exp(
+                -0.5 * ((t_norm - r2_center) / r_width) ** 2
+            )
+            voltage += r2_wave
+
+        n_win = max(1, int(0.05 * n_samples))
+        onset = self._raised_cosine_window(n_win)
+        offset = self._raised_cosine_window(n_win)
+        if n_win < n_samples // 2:
+            voltage[:n_win] *= onset
+            voltage[-n_win:] *= offset[::-1]
+
+        return time, voltage
+
+
+class AdvancedTWave(WaveformSegment):
+    """Advanced T-wave with configurable skew and biphasic morphology."""
+
+    def __init__(
+        self,
+        amplitude_mv: float = 0.25,
+        duration_ms: float = 160,
+        skew: float = 0.0,
+        biphasic: bool = False,
+        secondary_ratio: float = 0.4,
+    ):
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing("T_wave", duration_ms)
+        valid_amp, _ = self._validator.validate_amplitude("T_wave", abs(amplitude_mv))
+
+        if not (valid_timing and valid_amp):
+            raise ValueError(
+                "AdvancedTWave parameters outside clinical range"
+            )
+
+        super().__init__(duration_ms, amplitude_mv)
+        self.skew = skew
+        self.biphasic = biphasic
+        self.secondary_ratio = secondary_ratio
+
+    def _raised_cosine_window(self, n: int) -> np.ndarray:
+        if n == 0:
+            return np.array([])
+        t = np.linspace(-np.pi / 2, np.pi / 2, n)
+        return 0.5 * (1 + np.sin(t))
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        t_norm = np.linspace(0, 1, n_samples)
+
+        main_center = 0.45 + 0.1 * self.skew
+        main_width = 0.15
+        main_shape = np.exp(-0.5 * ((t_norm - main_center) / main_width) ** 2)
+        if main_shape.max() != 0:
+            main_shape /= main_shape.max()
+        voltage = self.amplitude_mv * main_shape
+
+        if self.biphasic:
+            sec_center = 0.65 + 0.1 * self.skew
+            sec_width = 0.15
+            sec_shape = np.exp(-0.5 * ((t_norm - sec_center) / sec_width) ** 2)
+            if sec_shape.max() != 0:
+                sec_shape /= sec_shape.max()
+            sec_amp = -np.sign(self.amplitude_mv) * self.secondary_ratio * abs(self.amplitude_mv)
+            voltage += sec_amp * sec_shape
+
+        n_win = max(1, int(0.05 * n_samples))
+        onset = self._raised_cosine_window(n_win)
+        offset = self._raised_cosine_window(n_win)
+        if n_win < n_samples // 2:
+            voltage[:n_win] *= onset
+            voltage[-n_win:] *= offset[::-1]
+
+        return time, voltage
+
+
 class UWave(WaveformSegment):
     """U-wave segment following ventricular repolarization."""
 
