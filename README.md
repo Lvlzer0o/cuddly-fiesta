@@ -254,3 +254,34 @@ dependencies and run the unit tests. A minimal example follows:
 python -m pip install -r requirements.txt
 python -m pytest
 ```
+
+## Development
+
+Example commands for running module demos:
+
+```bash
+python -m cuddly_fiesta baseline
+python -m cuddly_fiesta animate --multi
+python -m cuddly_fiesta gui
+python -m cuddly_fiesta agent run-all
+```
+
+### Building the zipapp
+
+The repository provides `build_zipapp.sh` which packages the
+`cuddly_fiesta` package into a standalone `cuddly_fiesta.pyz` archive:
+
+```bash
+./build_zipapp.sh
+python cuddly_fiesta.pyz agent run-all
+```
+
+### Bundling into a single file
+
+Run `./bundle.sh` to create a self-contained `run.py` executable.  This
+uses the same entry point as the zipapp and is handy for quick sharing.
+After bundling you can invoke commands just like the module:
+
+```bash
+./run.py baseline
+```
