@@ -140,7 +140,8 @@ class ECGGui:
     def _update_plot(self) -> None:
         if not self.running:
             return
-        step = max(1, int(self.playback_speed.get()))
+        base_samples_per_update = (1000 * self.interval_ms) / 1000.0 # Assumes 1000Hz sampling rate
+        step = max(1, int(base_samples_per_update * self.playback_speed.get()))
         self.frame_idx = (self.frame_idx + step) % len(self.time)
         for ln, data in zip(self.lines, self.leads):
             ln.set_data(self.time[: self.frame_idx], data[: self.frame_idx])
