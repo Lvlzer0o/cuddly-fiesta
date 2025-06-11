@@ -47,7 +47,8 @@ def _animate_multi_lead(multi: MultiLeadECG, interval_ms: int) -> FuncAnimation:
     lines = []
 
     # Determine global voltage range across all leads for consistent scaling
-    max_amp = max(float(abs(lead).max()) for lead in multi.leads.values())
+    # Determine global voltage range across all leads for consistent scaling
+    max_amp = max(max(float(abs(lead).max()) for lead in multi.leads.values()), 0.5)
     ylim = (-1.1 * max_amp, 1.1 * max_amp)
 
     for ax, name in zip(axes.ravel(), order):
