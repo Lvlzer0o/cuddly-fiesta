@@ -349,7 +349,8 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
 
-        pr = 0.16
+        # Example: PR_INTERVAL_SEC = 0.16 (defined elsewhere)
+        pr = DEFAULT_PR_INTERVAL_SEC
 
         # First normal beat
         p1 = PWave(amplitude_mv=0.15, duration_ms=100)
