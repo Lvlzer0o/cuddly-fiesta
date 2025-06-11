@@ -9,12 +9,12 @@ into a single entry-point for ease of use.
 
 import argparse
 import sys
-import os
+# import os  # Removed unused import
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union, Type
+from typing import Dict, List, Tuple, Union, Type  # Removed unused Optional
 from abc import ABC, abstractmethod
 import warnings
-import logging
+# import logging  # Removed unused import
 import csv
 
 # Scientific computing
@@ -24,7 +24,7 @@ from scipy.stats import skewnorm
 # Visualization
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+# import matplotlib.patches as patches  # Removed unused import
 from matplotlib.animation import FuncAnimation
 
 # GUI (optional - will work without tkinter)
@@ -35,6 +35,10 @@ try:
     HAS_TKINTER = True
 except ImportError:
     HAS_TKINTER = False
+    # Define placeholders for the imported modules
+    tk = None
+    ttk = None
+    FigureCanvasTkAgg = None
     print("Note: Tkinter not available. GUI mode disabled.")
 
 
