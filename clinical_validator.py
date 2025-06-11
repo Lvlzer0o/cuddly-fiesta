@@ -204,7 +204,6 @@ class ECGSegmentGenerator:
         fig, ax = plt.subplots(figsize=(12, 8))
         
         # Use baseline generator's grid system
-        baseline_data = self.baseline_generator.get_baseline_data()
         
         # Create temporary baseline for grid
         temp_baseline = ECGBaseline(duration_sec=max(time), sampling_rate=self.sampling_rate)
