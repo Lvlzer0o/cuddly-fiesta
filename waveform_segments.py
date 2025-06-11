@@ -373,10 +373,14 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
         pattern.append({"segment": pvc_t, "start_time_sec": pvc_t_start})
 
         # Next normal beat after compensatory pause
-        next_qrs_start = pvc_start + self.rr_interval + self.premature_offset
-        next_qrs_start = self._validator.snap_to_grid_time(next_qrs_start * 1000) / 1000.0
-        p2_start = next_qrs_start - pr
-        p2_start = self._validator.snap_to_grid_time(p2_start * 1000) / 1000.0
+        # Next normal beat after compensatory pause
+        # P2 should occur at the next expected sinus interval if the sinus node is not reset
+        p2_start_raw = 2 * self.rr_interval
+        p2_start = self._validator.snap_to_grid_time(p2_start_raw * 1000) / 1000.0
+
+        # QRS2 follows P2 after a normal PR interval
+        next_qrs_start_raw = p2_start + pr 
+        next_qrs_start = self._validator.snap_to_grid_time(next_qrs_start_raw * 1000) / 1000.0
 
         p2 = PWave(amplitude_mv=0.15, duration_ms=100)
         qrs2 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
