@@ -57,7 +57,12 @@ class PWave(WaveformSegment):
         component_2 = 0.4 * self.amplitude_mv * np.exp(-0.5 * ((time - peak_time_2) / sigma_2) ** 2)
         
         voltage = component_1 + component_2
-        
+
+        # Scale to ensure the peak amplitude matches the configured value
+        peak = np.max(np.abs(voltage))
+        if peak > 0:
+            voltage *= self.amplitude_mv / peak
+
         return time, voltage
 
 
