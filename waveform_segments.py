@@ -359,7 +359,7 @@ class PrematureVentricularContraction(ArrhythmiaPattern):
 
         pattern.append({"segment": p1, "start_time_sec": 0.0})
         pattern.append({"segment": qrs1, "start_time_sec": pr})
-        t1_start = pr + qrs1.duration_ms / 1000.0 + 0.12
+        t1_start = pr + qrs1.duration_ms / 1000.0 + NORMAL_BEAT_ST_DURATION_SEC # Assuming NORMAL_BEAT_ST_DURATION_SEC = 0.12
         pattern.append({"segment": t1, "start_time_sec": t1_start})
 
         # PVC beat
