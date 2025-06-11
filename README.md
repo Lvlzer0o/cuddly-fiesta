@@ -249,3 +249,13 @@ The tests can also be executed with the standard library:
 ```bash
 python -m unittest discover -s tests
 ```
+
+## Continuous Integration
+
+For automated environments the CI pipeline should install the project
+dependencies and run the unit tests. A minimal example follows:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest
+```
