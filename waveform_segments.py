@@ -161,6 +161,38 @@ class TWave(WaveformSegment):
         voltage = self.amplitude_mv * shape
         return time, voltage
 
+
+class UWave(WaveformSegment):
+    """U-wave segment following ventricular repolarization."""
+
+    def __init__(self, amplitude_mv: float = 0.05, duration_ms: float = 80):
+        """Initialize U-wave with clinical validation."""
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing('U_wave', duration_ms)
+        valid_amp, _ = self._validator.validate_amplitude('U_wave', abs(amplitude_mv))
+
+        if not (valid_timing and valid_amp):
+            raise ValueError(
+                f"U-wave parameters outside clinical range: duration={duration_ms}ms amplitude={amplitude_mv}mV"
+            )
+
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Generate U-wave using a simple narrow Gaussian."""
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        sigma = self.duration_ms / 1000.0 / 6
+        center = self.duration_ms / 2000.0
+        shape = np.exp(-0.5 * ((time - center) / sigma) ** 2)
+        if shape.max() != 0:
+            shape /= shape.max()
+
+        voltage = self.amplitude_mv * shape
+        return time, voltage
+
 class NormalSinusRhythm(ArrhythmiaPattern):
     """Normal sinus rhythm pattern - modular and swappable."""
     
@@ -216,6 +248,83 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         return pattern
 
 
+class AtrialFibrillation(ArrhythmiaPattern):
+    """Simple atrial fibrillation pattern with irregular RR intervals."""
+
+    def __init__(self, heart_rate_bpm: int = 90, duration_sec: float = 3.0):
+        super().__init__("Atrial Fibrillation")
+
+        if not (60 <= heart_rate_bpm <= 150):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside range (60-150 bpm)"
+            )
+
+        self.heart_rate_bpm = heart_rate_bpm
+        self.duration_sec = duration_sec
+        self._validator = ClinicalValidator()
+        self.base_rr = 60.0 / heart_rate_bpm
+
+    def define_pattern(self) -> list:
+        pattern = []
+        rng = np.random.default_rng(0)
+        t = 0.0
+
+        while t < self.duration_sec:
+            qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+            qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
+            pattern.append({'segment': qrs, 'start_time_sec': qrs_start})
+
+            tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
+            t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+            tw_start = self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
+            pattern.append({'segment': t_wave, 'start_time_sec': tw_start})
+
+            uw_start = tw_start + t_wave.duration_ms / 1000.0 + 0.04
+            u_wave = UWave(amplitude_mv=0.05, duration_ms=80)
+            uw_start = self._validator.snap_to_grid_time(uw_start * 1000) / 1000.0
+            pattern.append({'segment': u_wave, 'start_time_sec': uw_start})
+
+            rr = self.base_rr + rng.uniform(-0.3 * self.base_rr, 0.3 * self.base_rr)
+            t += rr
+
+        return pattern
+
+
+class VentricularTachycardia(ArrhythmiaPattern):
+    """Rapid ventricular tachycardia pattern."""
+
+    def __init__(self, heart_rate_bpm: int = 160, duration_sec: float = 3.0):
+        super().__init__("Ventricular Tachycardia")
+
+        if not (120 <= heart_rate_bpm <= 250):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside range (120-250 bpm)"
+            )
+
+        self.heart_rate_bpm = heart_rate_bpm
+        self.duration_sec = duration_sec
+        self._validator = ClinicalValidator()
+        self.rr_interval = 60.0 / heart_rate_bpm
+
+    def define_pattern(self) -> list:
+        pattern = []
+        t = 0.0
+
+        while t < self.duration_sec:
+            qrs = QRSComplex(r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
+            qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
+            pattern.append({'segment': qrs, 'start_time_sec': qrs_start})
+
+            tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.08
+            t_wave = TWave(amplitude_mv=-0.2, duration_ms=160)
+            tw_start = self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
+            pattern.append({'segment': t_wave, 'start_time_sec': tw_start})
+
+            t += self.rr_interval
+
+        return pattern
+
+
 def demo_modular_segments(output_dir=None):
     """Demonstrate modular waveform segments."""
     print("🧩 Modular Waveform Segments Demo")
@@ -235,6 +344,10 @@ def demo_modular_segments(output_dir=None):
     print("Testing T-wave module...")
     t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
     ecg.add_waveform_segment(t_wave, start_time_sec=1.4)
+
+    print("Testing U-wave module...")
+    u_wave = UWave(amplitude_mv=0.05, duration_ms=80)
+    ecg.add_waveform_segment(u_wave, start_time_sec=1.65)
     
     # Validate grid integrity after adding segments
     ecg.validate_grid_integrity()
@@ -248,6 +361,7 @@ def demo_modular_segments(output_dir=None):
         "• P-wave: 100ms, 0.15mV\\n"
         "• QRS complex: 100ms, 1.0mV\\n"
         "• T-wave: 160ms, 0.25mV\\n"
+        "• U-wave: 80ms, 0.05mV\\n"
         "• Grid scaling preserved\\n"
         "• Modules are swappable"
     )
@@ -273,6 +387,8 @@ def demo_arrhythmia_pattern_swap():
     # Create ECG cores for different patterns
     ecg1 = ECGCore(duration_sec=2, sampling_rate=1000)
     ecg2 = ECGCore(duration_sec=2, sampling_rate=1000)
+    ecg3 = ECGCore(duration_sec=3, sampling_rate=1000)
+    ecg4 = ECGCore(duration_sec=3, sampling_rate=1000)
     
     # Pattern 1: Normal sinus rhythm at 70 bpm
     print("Applying Normal Sinus Rhythm (70 bpm)...")
@@ -283,6 +399,14 @@ def demo_arrhythmia_pattern_swap():
     print("Applying Normal Sinus Rhythm (100 bpm)...")
     nsr_100 = NormalSinusRhythm(heart_rate_bpm=100)
     nsr_100.apply_to_ecg(ecg2)
+    print("Applying Atrial Fibrillation...")
+    af = AtrialFibrillation(heart_rate_bpm=90, duration_sec=3.0)
+    af.apply_to_ecg(ecg3)
+
+    print("Applying Ventricular Tachycardia...")
+    vt = VentricularTachycardia(heart_rate_bpm=160, duration_sec=3.0)
+    vt.apply_to_ecg(ecg4)
+
     
     # Validate both patterns
     print("\\nValidating Pattern 1 (70 bpm):")
@@ -290,6 +414,11 @@ def demo_arrhythmia_pattern_swap():
     
     print("\\nValidating Pattern 2 (100 bpm):")
     ecg2.validate_grid_integrity()
+    print("\nValidating Pattern 3 (Atrial Fibrillation):")
+    ecg3.validate_grid_integrity()
+
+    print("\nValidating Pattern 4 (Ventricular Tachycardia):")
+    ecg4.validate_grid_integrity()
     
     print("✅ Pattern swap demonstration complete!")
     print("   Same modules, different arrhythmia patterns")
