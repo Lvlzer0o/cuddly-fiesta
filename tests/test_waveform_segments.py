@@ -43,7 +43,7 @@ class TestArrhythmiaPatterns(unittest.TestCase):
         pattern.apply_to_ecg(ecg)
         grid = GridScaling()
         for info in ecg.segments_added:
-            self.assertTrue(grid.validate_timing(info["start_time"] * 1000))
+            self.assertTrue(grid.validate_timing(info["start_time"] * 1000), f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned")
             seg = info["segment"]
             self.assertTrue(grid.validate_timing(seg.duration_ms))
 
