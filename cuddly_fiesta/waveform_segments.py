@@ -204,6 +204,75 @@ class UWave(WaveformSegment):
         voltage = self.amplitude_mv * shape
         return time, voltage
 
+
+class AdvancedQRSComplex(WaveformSegment):
+    """Clinically validated QRS complex with refined morphology."""
+
+    def __init__(self, r_amplitude_mv: float = 1.0, duration_ms: float = 100,
+                 q_ratio: float = 0.2, s_ratio: float = 0.3):
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing('QRS_complex', duration_ms)
+        valid_amp, _ = self._validator.validate_amplitude('R_wave', r_amplitude_mv)
+
+        if not (valid_timing and valid_amp):
+            raise ValueError(
+                f"AdvancedQRSComplex parameters outside clinical range: duration={duration_ms}ms amplitude={r_amplitude_mv}mV"
+            )
+
+        super().__init__(duration_ms, r_amplitude_mv)
+        self.q_ratio = q_ratio
+        self.s_ratio = s_ratio
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Generate QRS complex with simple piecewise morphology."""
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        q_end = int(0.25 * n_samples)
+        r_end = int(0.5 * n_samples)
+
+        voltage = np.zeros(n_samples)
+        voltage[:q_end] = np.linspace(0, -self.q_ratio * self.amplitude_mv, q_end)
+        voltage[q_end:r_end] = np.linspace(-self.q_ratio * self.amplitude_mv,
+                                          self.amplitude_mv,
+                                          r_end - q_end)
+        voltage[r_end:] = np.linspace(self.amplitude_mv,
+                                      -self.s_ratio * self.amplitude_mv,
+                                      n_samples - r_end)
+
+        return time, voltage
+
+
+class AdvancedTWave(WaveformSegment):
+    """Clinically validated T-wave with skewed Gaussian profile."""
+
+    def __init__(self, amplitude_mv: float = 0.25, duration_ms: float = 160):
+        self._validator = ClinicalValidator()
+
+        valid_timing, _ = self._validator.validate_timing('T_wave', duration_ms)
+        valid_amp, _ = self._validator.validate_amplitude('T_wave', abs(amplitude_mv))
+
+        if not (valid_timing and valid_amp):
+            raise ValueError(
+                f"AdvancedTWave parameters outside clinical range: duration={duration_ms}ms amplitude={amplitude_mv}mV"
+            )
+
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        t_norm = np.linspace(-1, 1, n_samples)
+        skew = 5 if self.amplitude_mv >= 0 else -5
+        shape = skewnorm.pdf(t_norm, a=skew, loc=0, scale=0.5)
+        if shape.max() != 0:
+            shape /= shape.max()
+
+        voltage = self.amplitude_mv * shape
+        return time, voltage
+
 class NormalSinusRhythm(ArrhythmiaPattern):
     """Normal sinus rhythm pattern - modular and swappable."""
     
@@ -255,6 +324,38 @@ class NormalSinusRhythm(ArrhythmiaPattern):
             'segment': t_wave,
             'start_time_sec': t_wave_start
         })
+
+        return pattern
+
+
+class AdvancedNormalSinusRhythm(ArrhythmiaPattern):
+    """Normal sinus rhythm using advanced waveform segments."""
+
+    def __init__(self, heart_rate_bpm: int = 70):
+        super().__init__("Advanced Normal Sinus Rhythm")
+        if not (50 <= heart_rate_bpm <= 120):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside reasonable range (50-120 bpm)"
+            )
+        self.heart_rate_bpm = heart_rate_bpm
+        self.rr_interval_sec = 60.0 / heart_rate_bpm
+
+    def define_pattern(self) -> list:
+        pattern = []
+
+        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs_complex = AdvancedQRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = AdvancedTWave(amplitude_mv=0.25, duration_ms=160)
+
+        pr_interval_sec = 0.16
+        qrs_start = pr_interval_sec
+
+        pattern.append({'segment': p_wave, 'start_time_sec': 0.0})
+        pattern.append({'segment': qrs_complex, 'start_time_sec': qrs_start})
+
+        st_duration = 0.12
+        t_wave_start = qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
+        pattern.append({'segment': t_wave, 'start_time_sec': t_wave_start})
 
         return pattern
 

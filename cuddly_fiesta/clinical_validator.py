@@ -177,6 +177,7 @@ class ECGSegmentGenerator:
         # Initialize baseline for consistent scaling
         self.baseline_generator = ECGBaseline(duration_sec=10, sampling_rate=sampling_rate)
         self.grid_specs = self.baseline_generator.get_baseline_data()['grid_specs']
+
     
     def add_physiologic_noise(self, signal, noise_amplitude=None):
         """Add toggleable physiologic noise to signal.
@@ -260,22 +261,22 @@ class ECGSegmentGenerator:
         """Comprehensive validation of segment against clinical constraints."""
         print(f"\n🔍 Validating {segment_name} Segment:")
         print("=" * 50)
-        
+
         # Calculate metrics
         duration_ms = (max(time) - min(time)) * 1000
         amplitude_mv = max(signal) - min(signal)
-        
-        # Timing validation
-        timing_valid, timing_msg = self.validate_timing(segment_name, duration_ms)
+
+        # Timing validation using underlying validator
+        timing_valid, timing_msg = self.validator.validate_timing(segment_name, duration_ms)
         print(timing_msg)
-        
-        # Amplitude validation  
-        amplitude_valid, amplitude_msg = self.validate_amplitude(segment_name, amplitude_mv)
+
+        # Amplitude validation
+        amplitude_valid, amplitude_msg = self.validator.validate_amplitude(segment_name, amplitude_mv)
         print(amplitude_msg)
-        
+
         # Grid alignment check with tolerance for floating-point precision
-        snapped_duration = self.snap_to_grid_time(duration_ms)
-        snapped_amplitude = self.snap_to_grid_voltage(amplitude_mv)
+        snapped_duration = self.validator.snap_to_grid_time(duration_ms)
+        snapped_amplitude = self.validator.snap_to_grid_voltage(amplitude_mv)
         
         # Use tolerance for floating-point comparison
         duration_tolerance = max(0.1, FLOATING_POINT_TOLERANCE * abs(snapped_duration))
