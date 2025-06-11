@@ -39,6 +39,12 @@ class PWaveGenerator(ECGSegmentGenerator):
         
         # Validate parameters against constraints
         self._validate_parameters()
+
+    def validate_segment(self, segment_name, time, voltage):
+        """Validate a generated segment using the internal validator."""
+        timing_valid, _ = self.validator.validate_timing(segment_name, (max(time) - min(time)) * 1000)
+        amplitude_valid, _ = self.validator.validate_amplitude(segment_name, max(voltage) - min(voltage))
+        return timing_valid and amplitude_valid
     
     def _validate_parameters(self):
         """Validate P-wave parameters against clinical constraints."""
@@ -197,10 +203,10 @@ class PWaveGenerator(ECGSegmentGenerator):
         # Generate P-wave
         p_wave_data = self.generate_p_wave(start_time_ms=1000)  # Start at 1 second
         
-        # Validate the generated segment
+        # Validate the generated segment using a simplified check
         validation_passed = self.validate_segment(
-            self.segment_name, 
-            p_wave_data['time'], 
+            self.segment_name,
+            p_wave_data['time'],
             p_wave_data['voltage']
         )
         
