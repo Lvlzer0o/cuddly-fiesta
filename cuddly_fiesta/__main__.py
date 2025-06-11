@@ -1,3 +1,11 @@
+"""Command-line entry point for cuddly_fiesta.
+
+This module allows running various parts of the cuddly_fiesta package
+from the command line, such as generating baseline ECGs, animations,
+launching the GUI, or running agent demos.
+
+Use `python -m cuddly_fiesta --help` for usage details.
+"""
 import argparse
 import matplotlib.pyplot as plt
 
