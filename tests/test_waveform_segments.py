@@ -30,8 +30,10 @@ class TestWaves(unittest.TestCase):
 
     def test_uwave_defaults(self):
         uw = UWave()
-        self.assertTrue(self.validator.validate_timing("U_wave", uw.duration_ms)[0])
-        self.assertTrue(self.validator.validate_amplitude("U_wave", abs(uw.amplitude_mv))[0])
+        valid_timing, msg_timing = self.validator.validate_timing("U_wave", uw.duration_ms)
+        self.assertTrue(valid_timing, msg_timing)
+        valid_amp, msg_amp = self.validator.validate_amplitude("U_wave", abs(uw.amplitude_mv))
+        self.assertTrue(valid_amp, msg_amp)
         self.assertTrue(self.grid.validate_timing(uw.duration_ms))
 
 
