@@ -255,7 +255,7 @@ class ECGBaseline:
         print(f"Baseline plot saved as {out_path}")
 
 
-def main():
+def main(show_plot: bool = False):
     """Demonstration of ECG baseline generator."""
     print("Generating ECG Baseline...")
     
@@ -291,8 +291,20 @@ def main():
     print(f"Baseline std: {np.std(baseline_data['baseline']):.4f} mV")
     print(f"Baseline range: [{np.min(baseline_data['baseline']):.4f}, {np.max(baseline_data['baseline']):.4f}] mV")
     
-    plt.show()
+    if show_plot:
+        plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ECG baseline demo")
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="display plot interactively",
+    )
+    args = parser.parse_args()
+
+    env_show = os.getenv("SHOW_PLOT", "0") == "1"
+    main(show_plot=args.show or env_show)
