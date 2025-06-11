@@ -45,7 +45,7 @@ class TestArrhythmiaPatterns(unittest.TestCase):
         for info in ecg.segments_added:
             self.assertTrue(grid.validate_timing(info["start_time"] * 1000), f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned")
             seg = info["segment"]
-            self.assertTrue(grid.validate_timing(seg.duration_ms))
+            self.assertTrue(grid.validate_timing(seg.duration_ms), f"Segment {seg.__class__.__name__} duration {seg.duration_ms}ms not grid aligned")
 
     def test_all_patterns_grid_alignment(self):
         self._check_pattern(NormalSinusRhythm())
