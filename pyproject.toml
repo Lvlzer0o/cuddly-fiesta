@@ -24,6 +24,7 @@ verify-improvements = "verify_improvements:main"
 p-wave-summary = "p_wave_summary:print_p_wave_summary"
 ecg-multilead-demo = "multi_lead:main"
 ecg-animate = "ecg_animation:main"
+ecg-gui = "ekg_ui:main"
 
 [tool.setuptools]
 py-modules = [
@@ -37,4 +38,5 @@ py-modules = [
     "grid_constants",
     "multi_lead",
     "ecg_animation",
+    "ekg_ui",
 ]
