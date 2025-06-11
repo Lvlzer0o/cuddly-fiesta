@@ -130,7 +130,12 @@ class ECGGui(tk.Tk):
     def _update_plot(self) -> None:
         dt = 0.05 * float(self.speed.get())
         samples = int(dt * self.ecg.sampling_rate)
-        t, voltages = self.ecg.step(samples)
+        t, voltages, looped = self.ecg.step(samples)
+
+        if looped:
+            # Reset data for all lines when ECG data has looped to prevent memory growth
+            for plot_line in self.lines:
+                plot_line.set_data([], [])
 
         for line, v in zip(self.lines, voltages):
             xdata = np.append(line.get_xdata(), t)
