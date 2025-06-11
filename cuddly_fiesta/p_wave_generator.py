@@ -199,8 +199,8 @@ class PWaveGenerator(ECGSegmentGenerator):
         
         # Validate the generated segment
         validation_passed = self.validate_segment(
-            self.segment_name, 
-            p_wave_data['time'], 
+            self.segment_name,
+            p_wave_data['time'],
             p_wave_data['voltage']
         )
         
