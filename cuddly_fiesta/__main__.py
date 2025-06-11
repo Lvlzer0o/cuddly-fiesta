@@ -16,6 +16,11 @@ from .waveform_segments import NormalSinusRhythm
 
 
 def _cmd_baseline(_args: argparse.Namespace) -> None:
+    """Handles the 'baseline' subcommand.
+    
+    Generates and displays a baseline ECG plot by calling `ecg_baseline.main()`.
+    The `_args` parameter is currently unused by this specific command.
+    """
     ecg_baseline.main(show_plot=True)
 
 
