@@ -138,6 +138,12 @@ class ECGGui:
         self.canvas.draw_idle()
 
     def _update_plot(self) -> None:
+        """Periodically updates the ECG plot to create an animation.
+
+        Advances the frame index based on playback speed, updates the data
+        for each lead's line plot, and schedules the next call to itself
+        via `self.master.after`.
+        """
         if not self.running:
             return
         base_samples_per_update = (1000 * self.interval_ms) / 1000.0 # Assumes 1000Hz sampling rate
