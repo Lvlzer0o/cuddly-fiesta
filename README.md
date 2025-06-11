@@ -44,8 +44,8 @@ For development you may prefer an editable install:
 pip install -e .
 ```
 
-This makes the console utilities such as `p-wave-generator` and
-`verify-improvements` available on your PATH.
+This makes the console utilities such as `p-wave-generator`,
+`verify-improvements`, and `ecg-multilead-demo` available on your PATH.
 
 ### Output Directory
 
@@ -171,6 +171,15 @@ class AtrialFibrillation(ArrhythmiaPattern):
 af_pattern = AtrialFibrillation()
 af_pattern.apply_to_ecg(ecg)  # Same grid, different arrhythmia
 ```
+
+### Multi-lead Generation
+```python
+from multi_lead import MultiLeadECG
+
+multi = MultiLeadECG(ecg)
+fig, axes = multi.plot_all_leads()
+```
+The `ecg-multilead-demo` command produces this example plot.
 
 ## ⚠️ Critical Rules
 
