@@ -330,6 +330,173 @@ class VentricularTachycardia(ArrhythmiaPattern):
         return pattern
 
 
+class PrematureVentricularContraction(ArrhythmiaPattern):
+    """Isolated premature ventricular contraction with compensatory pause."""
+
+    def __init__(self, heart_rate_bpm: int = 70):
+        super().__init__("Premature Ventricular Contraction")
+
+        if not (50 <= heart_rate_bpm <= 120):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside range (50-120 bpm)"
+            )
+
+        self.heart_rate_bpm = heart_rate_bpm
+        self.rr_interval = 60.0 / heart_rate_bpm
+        self.premature_offset = 0.3 * self.rr_interval
+        self._validator = ClinicalValidator()
+
+    def define_pattern(self) -> list:
+        pattern = []
+
+        # Example: PR_INTERVAL_SEC = 0.16 (defined elsewhere)
+        pr = DEFAULT_PR_INTERVAL_SEC
+
+        # First normal beat
+        p1 = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs1 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t1 = TWave(amplitude_mv=0.25, duration_ms=160)
+
+        pattern.append({"segment": p1, "start_time_sec": 0.0})
+        pattern.append({"segment": qrs1, "start_time_sec": pr})
+        t1_start = pr + qrs1.duration_ms / 1000.0 + NORMAL_BEAT_ST_DURATION_SEC # Assuming NORMAL_BEAT_ST_DURATION_SEC = 0.12
+        pattern.append({"segment": t1, "start_time_sec": t1_start})
+
+        # PVC beat
+        pvc_qrs = QRSComplex(r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1)
+        pvc_start = self.rr_interval - self.premature_offset
+        pvc_start = self._validator.snap_to_grid_time(pvc_start * 1000) / 1000.0
+        pattern.append({"segment": pvc_qrs, "start_time_sec": pvc_start})
+
+        pvc_t_start = pvc_start + pvc_qrs.duration_ms / 1000.0 + 0.08
+        pvc_t_start = self._validator.snap_to_grid_time(pvc_t_start * 1000) / 1000.0
+        pvc_t = TWave(amplitude_mv=-0.2, duration_ms=160)
+        pattern.append({"segment": pvc_t, "start_time_sec": pvc_t_start})
+
+        # Next normal beat after compensatory pause
+        # Next normal beat after compensatory pause
+        # P2 should occur at the next expected sinus interval if the sinus node is not reset
+        p2_start_raw = 2 * self.rr_interval
+        p2_start = self._validator.snap_to_grid_time(p2_start_raw * 1000) / 1000.0
+
+        # QRS2 follows P2 after a normal PR interval
+        next_qrs_start_raw = p2_start + pr 
+        next_qrs_start = self._validator.snap_to_grid_time(next_qrs_start_raw * 1000) / 1000.0
+
+        p2 = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs2 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t2 = TWave(amplitude_mv=0.25, duration_ms=160)
+
+        pattern.append({"segment": p2, "start_time_sec": p2_start})
+        pattern.append({"segment": qrs2, "start_time_sec": next_qrs_start})
+        t2_start = next_qrs_start + qrs2.duration_ms / 1000.0 + 0.12
+        t2_start = self._validator.snap_to_grid_time(t2_start * 1000) / 1000.0
+        pattern.append({"segment": t2, "start_time_sec": t2_start})
+
+        return pattern
+
+
+class SecondDegreeAVBlock(ArrhythmiaPattern):
+    """Simple Mobitz type II second-degree AV block."""
+
+    def __init__(self, heart_rate_bpm: int = 75):
+        super().__init__("Second Degree AV Block")
+
+        if not (50 <= heart_rate_bpm <= 100):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside range (50-100 bpm)"
+            )
+
+        self.rr_interval = 60.0 / heart_rate_bpm
+        self._validator = ClinicalValidator()
+
+    def define_pattern(self) -> list:
+        pattern = []
+
+        pr = 0.16
+
+        # Beat 1 normal
+        p1 = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs1 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t1 = TWave(amplitude_mv=0.25, duration_ms=160)
+        pattern.append({"segment": p1, "start_time_sec": 0.0})
+        pattern.append({"segment": qrs1, "start_time_sec": pr})
+        t1_start = pr + qrs1.duration_ms / 1000.0 + 0.12
+        pattern.append({"segment": t1, "start_time_sec": t1_start})
+
+        # Beat 2 P-wave only (dropped QRS)
+        p2_start = self._validator.snap_to_grid_time(self.rr_interval * 1000) / 1000.0
+        p2 = PWave(amplitude_mv=0.15, duration_ms=100)
+        pattern.append({"segment": p2, "start_time_sec": p2_start})
+
+        # Beat 3 normal
+        p3_start = self._validator.snap_to_grid_time(2 * self.rr_interval * 1000) / 1000.0
+        qrs3_start = p3_start + pr
+        qrs3_start = self._validator.snap_to_grid_time(qrs3_start * 1000) / 1000.0
+        p3 = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs3 = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t3 = TWave(amplitude_mv=0.25, duration_ms=160)
+        pattern.append({"segment": p3, "start_time_sec": p3_start})
+        pattern.append({"segment": qrs3, "start_time_sec": qrs3_start})
+        t3_start = qrs3_start + qrs3.duration_ms / 1000.0 + 0.12
+        t3_start = self._validator.snap_to_grid_time(t3_start * 1000) / 1000.0
+        pattern.append({"segment": t3, "start_time_sec": t3_start})
+
+        return pattern
+
+
+class AtrialFlutter(ArrhythmiaPattern):
+    """Atrial flutter with 2:1 conduction pattern."""
+
+    def __init__(self, heart_rate_bpm: int = 150, duration_sec: float = 3.0):
+        super().__init__("Atrial Flutter")
+
+        if not (100 <= heart_rate_bpm <= 180):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm} outside range (100-180 bpm)"
+            )
+
+        self.rr_interval = 60.0 / heart_rate_bpm
+        self.flutter_interval = self.rr_interval / 2
+        self.duration_sec = duration_sec
+        self._validator = ClinicalValidator()
+
+    def define_pattern(self) -> list:
+        pattern = []
+        t = 0.0
+
+        while t < self.duration_sec:
+            # First flutter wave
+            f1_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
+            f1 = PWave(amplitude_mv=0.1, duration_ms=100)
+            pattern.append({"segment": f1, "start_time_sec": f1_start})
+
+            # Second flutter wave
+            f2_start = t + self.flutter_interval
+            if f2_start >= self.duration_sec:
+                break
+            f2_start = self._validator.snap_to_grid_time(f2_start * 1000) / 1000.0
+            f2 = PWave(amplitude_mv=0.1, duration_ms=100)
+            pattern.append({"segment": f2, "start_time_sec": f2_start})
+
+            # Conducted QRS
+            qrs_start = t + self.rr_interval
+            if qrs_start >= self.duration_sec:
+                break
+            qrs_start = self._validator.snap_to_grid_time(qrs_start * 1000) / 1000.0
+            qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+            pattern.append({"segment": qrs, "start_time_sec": qrs_start})
+
+            t_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
+            t_start = self._validator.snap_to_grid_time(t_start * 1000) / 1000.0
+            t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+            pattern.append({"segment": t_wave, "start_time_sec": t_start})
+
+            t += self.rr_interval
+
+        return pattern
+
+
 def demo_modular_segments(output_dir=None):
     """Demonstrate modular waveform segments."""
     print("🧩 Modular Waveform Segments Demo")
@@ -394,6 +561,9 @@ def demo_arrhythmia_pattern_swap():
     ecg2 = ECGCore(duration_sec=2, sampling_rate=1000)
     ecg3 = ECGCore(duration_sec=3, sampling_rate=1000)
     ecg4 = ECGCore(duration_sec=3, sampling_rate=1000)
+    ecg5 = ECGCore(duration_sec=3, sampling_rate=1000)
+    ecg6 = ECGCore(duration_sec=3, sampling_rate=1000)
+    ecg7 = ECGCore(duration_sec=3, sampling_rate=1000)
     
     # Pattern 1: Normal sinus rhythm at 70 bpm
     print("Applying Normal Sinus Rhythm (70 bpm)...")
@@ -412,6 +582,18 @@ def demo_arrhythmia_pattern_swap():
     vt = VentricularTachycardia(heart_rate_bpm=160, duration_sec=3.0)
     vt.apply_to_ecg(ecg4)
 
+    print("Applying Premature Ventricular Contraction...")
+    pvc = PrematureVentricularContraction(heart_rate_bpm=70)
+    pvc.apply_to_ecg(ecg5)
+
+    print("Applying Second Degree AV Block...")
+    avb = SecondDegreeAVBlock(heart_rate_bpm=75)
+    avb.apply_to_ecg(ecg6)
+
+    print("Applying Atrial Flutter...")
+    afl = AtrialFlutter(heart_rate_bpm=150, duration_sec=3.0)
+    afl.apply_to_ecg(ecg7)
+
     
     # Validate both patterns
     print("\\nValidating Pattern 1 (70 bpm):")
@@ -424,6 +606,15 @@ def demo_arrhythmia_pattern_swap():
 
     print("\nValidating Pattern 4 (Ventricular Tachycardia):")
     ecg4.validate_grid_integrity()
+
+    print("\nValidating Pattern 5 (PVC):")
+    ecg5.validate_grid_integrity()
+
+    print("\nValidating Pattern 6 (Second Degree AV Block):")
+    ecg6.validate_grid_integrity()
+
+    print("\nValidating Pattern 7 (Atrial Flutter):")
+    ecg7.validate_grid_integrity()
     
     print("✅ Pattern swap demonstration complete!")
     print("   Same modules, different arrhythmia patterns")
