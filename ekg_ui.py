@@ -29,7 +29,7 @@ class MultiLeadECG:
         self.duration_sec = duration_sec
         self.sampling_rate = sampling_rate
         self.n_samples = int(duration_sec * sampling_rate)
-        self.pattern = pattern or NormalSinusRhythm()
+        self.pattern: NormalSinusRhythm = pattern or NormalSinusRhythm()
 
         # Create 12 ECGCore instances
         self.leads: List[ECGCore] = [
