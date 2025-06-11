@@ -4,8 +4,8 @@ from typing import Union, Optional
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from ecg_core import ECGCore
-from multi_lead import MultiLeadECG
+from .ecg_core import ECGCore
+from .multi_lead import MultiLeadECG
 
 
 def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
@@ -97,7 +97,7 @@ ani: Optional[FuncAnimation] = None
 def main() -> Optional[FuncAnimation]:
     """Load example segments and display a real-time animation."""
     import argparse
-    from waveform_segments import NormalSinusRhythm
+    from .waveform_segments import NormalSinusRhythm
 
     parser = argparse.ArgumentParser(description="Real-time ECG animation demo")
     parser.add_argument(

@@ -5,7 +5,7 @@ Quick verification of ECG baseline improvements:
 3. Single calibration pulse at start only
 """
 
-from ecg_baseline import ECGBaseline
+from .ecg_baseline import ECGBaseline
 import matplotlib.pyplot as plt
 import numpy as np
 import os

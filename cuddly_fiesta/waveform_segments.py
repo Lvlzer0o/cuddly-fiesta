@@ -9,12 +9,12 @@ This file shows how to create plug-and-play waveform modules that:
 """
 
 import numpy as np
-from ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore
+from .ecg_core import WaveformSegment, ArrhythmiaPattern, ECGCore
 from typing import Tuple
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
-from clinical_validator import ClinicalValidator
+from .clinical_validator import ClinicalValidator
 from scipy.stats import skewnorm
 
 class PWave(WaveformSegment):

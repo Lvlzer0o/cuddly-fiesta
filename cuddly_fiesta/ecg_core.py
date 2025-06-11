@@ -16,7 +16,7 @@ from typing import Dict, List, Tuple, Optional
 import warnings
 import os
 from pathlib import Path
-from grid_constants import (
+from .grid_constants import (
     PAPER_SPEED_MM_PER_SEC,
     VOLTAGE_SCALE_MM_PER_MV,
     SMALL_SQUARE_TIME_SEC,
@@ -171,7 +171,7 @@ class ECGCore:
     
     def plot_with_grid(self, show_calibration: bool = True, figure_size: Tuple = (15, 8)):
         """Plot ECG with standard grid - inherits from ECGBaseline."""
-        from ecg_baseline import ECGBaseline
+        from .ecg_baseline import ECGBaseline
         
         # Create temporary baseline instance for grid plotting
         temp_baseline = ECGBaseline(self.duration_sec, self.sampling_rate)
