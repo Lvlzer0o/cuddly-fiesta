@@ -40,7 +40,7 @@ class PWave(WaveformSegment):
     def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate P-wave using asymmetric double-Gaussian model."""
         n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
-        time = np.linspace(0, self.duration_ms / 1000.0, n_samples)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
         
         # Asymmetric double-Gaussian for realistic P-wave
         # Early component: Right atrial depolarization (faster)
@@ -88,7 +88,7 @@ class QRSComplex(WaveformSegment):
     def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate QRS using triple-component sharp model."""
         n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
-        time = np.linspace(0, self.duration_ms / 1000.0, n_samples)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
         
         # Define component timing (sharp transitions)
         q_end = 0.3  # Q wave ends at 30% of QRS duration
@@ -147,7 +147,7 @@ class TWave(WaveformSegment):
     def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate T-wave using skewed Gaussian morphology."""
         n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
-        time = np.linspace(0, self.duration_ms / 1000.0, n_samples)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
 
         # Normalized time for morphology generation
         t_norm = np.linspace(0, 1, n_samples)

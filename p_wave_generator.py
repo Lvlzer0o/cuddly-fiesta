@@ -232,7 +232,12 @@ class PWaveGenerator(ECGSegmentGenerator):
         baseline = self.baseline_generator
         baseline.duration_sec = baseline_duration_sec
         baseline.n_samples = int(baseline_duration_sec * self.sampling_rate)
-        baseline.time = np.linspace(0, baseline_duration_sec, baseline.n_samples)
+        baseline.time = np.linspace(
+            0,
+            baseline_duration_sec,
+            baseline.n_samples,
+            endpoint=False,
+        )
         baseline.baseline = baseline._generate_baseline()
         
         # Generate P-wave
