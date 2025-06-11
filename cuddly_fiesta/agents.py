@@ -44,7 +44,7 @@ def run_all() -> None:
     waveform_segments.main()
 
     # Clinical verification and summaries
-    verify_improvements.main()
+    verify_improvements_main()
     print_p_wave_summary()
 
     logging.info("Demo suite complete")
