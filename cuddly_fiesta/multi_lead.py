@@ -4,9 +4,9 @@ from typing import Dict, Tuple
 import matplotlib.pyplot as plt
 import csv
 
-from ecg_baseline import ECGBaseline
+from .ecg_baseline import ECGBaseline
 
-from ecg_core import ECGCore
+from .ecg_core import ECGCore
 
 
 class MultiLeadECG:
@@ -99,7 +99,7 @@ class MultiLeadECG:
 
 def main():
     """Example usage generating a 12-lead plot from a basic ECG."""
-    from waveform_segments import NormalSinusRhythm
+    from .waveform_segments import NormalSinusRhythm
     import os
     from pathlib import Path
 

@@ -8,9 +8,9 @@ import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
-from ecg_core import ECGCore
-from multi_lead import MultiLeadECG
-from waveform_segments import (
+from .ecg_core import ECGCore
+from .multi_lead import MultiLeadECG
+from .waveform_segments import (
     NormalSinusRhythm,
     AtrialFibrillation,
     VentricularTachycardia,
