@@ -330,6 +330,7 @@ class ClinicalValidator:
         snapped_start = self.snap_to_grid_time(start_ms)
         snapped_duration = self.snap_to_grid_time(duration_ms)
         
+        # Make sure n_samples is an integer
         n_samples = int(snapped_duration * sampling_rate / 1000)
         time_array = np.linspace(
             snapped_start / 1000,
@@ -531,7 +532,7 @@ class QRSComplex(WaveformSegment):
         
         q_end = 0.3
         r_peak = 0.5
-        s_end = 1.0
+        # s_end variable is not used, removing it
         
         voltage = np.zeros(n_samples)
         
@@ -775,6 +776,7 @@ class MultiLeadECG:
     def __init__(self, ecg: ECGCore):
         self.ecg = ecg
         self.time = ecg.time
+        self._baseline_grid_helper = None  # Initialize the helper attribute
         self._generate_leads()
     
     def _generate_leads(self) -> None:
@@ -1190,9 +1192,9 @@ def run_animation(multi_lead=False, interval_ms=40):
     else:
         source = ecg
     
-    ani = animate_ecg(source, interval_ms=interval_ms)
+    # Create and show the animation (but don't return it)
+    animate_ecg(source, interval_ms=interval_ms)
     plt.show()
-    return ani
 
 
 def run_gui():
@@ -1290,7 +1292,7 @@ Examples:
             print("Check the 'output' directory for generated files.")
     
     if args.animate:
-        ani = run_animation(multi_lead=args.multi, interval_ms=args.interval)
+        run_animation(multi_lead=args.multi, interval_ms=args.interval)
     
     if args.gui:
         run_gui()
