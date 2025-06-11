@@ -18,25 +18,13 @@ dependencies = [
 ]
 
 [project.scripts]
-ecg-core-demo = "ecg_core:main"
-p-wave-generator = "p_wave_generator:main"
-verify-improvements = "verify_improvements:main"
-p-wave-summary = "p_wave_summary:print_p_wave_summary"
-ecg-multilead-demo = "multi_lead:main"
-ecg-animate = "ecg_animation:main"
-ecg-gui = "ekg_ui:main"
+ecg-core-demo = "cuddly_fiesta.ecg_core:main"
+p-wave-generator = "cuddly_fiesta.p_wave_generator:main"
+verify-improvements = "cuddly_fiesta.verify_improvements:main"
+p-wave-summary = "cuddly_fiesta.p_wave_summary:print_p_wave_summary"
+ecg-multilead-demo = "cuddly_fiesta.multi_lead:main"
+ecg-animate = "cuddly_fiesta.ecg_animation:main"
+ecg-gui = "cuddly_fiesta.ekg_ui:main"
 
 [tool.setuptools]
-py-modules = [
-    "clinical_validator",
-    "ecg_baseline",
-    "ecg_core",
-    "p_wave_generator",
-    "p_wave_summary",
-    "verify_improvements",
-    "waveform_segments",
-    "grid_constants",
-    "multi_lead",
-    "ecg_animation",
-    "ekg_ui",
-]
+packages = ["cuddly_fiesta"]
