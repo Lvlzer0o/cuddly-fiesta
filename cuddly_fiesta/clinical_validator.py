@@ -266,16 +266,16 @@ class ECGSegmentGenerator:
         amplitude_mv = max(signal) - min(signal)
         
         # Timing validation
-        timing_valid, timing_msg = self.validate_timing(segment_name, duration_ms)
+        timing_valid, timing_msg = self.validator.validate_timing(segment_name, duration_ms)
         print(timing_msg)
         
         # Amplitude validation  
-        amplitude_valid, amplitude_msg = self.validate_amplitude(segment_name, amplitude_mv)
+        amplitude_valid, amplitude_msg = self.validator.validate_amplitude(segment_name, amplitude_mv)
         print(amplitude_msg)
         
         # Grid alignment check with tolerance for floating-point precision
-        snapped_duration = self.snap_to_grid_time(duration_ms)
-        snapped_amplitude = self.snap_to_grid_voltage(amplitude_mv)
+        snapped_duration = self.validator.snap_to_grid_time(duration_ms)
+        snapped_amplitude = self.validator.snap_to_grid_voltage(amplitude_mv)
         
         # Use tolerance for floating-point comparison
         duration_tolerance = max(0.1, FLOATING_POINT_TOLERANCE * abs(snapped_duration))

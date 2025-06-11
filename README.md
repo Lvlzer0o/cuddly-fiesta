@@ -20,13 +20,15 @@
 ecg_project/
 ├── ecg_baseline.py              # Original baseline with clinical markers
 ├── ecg_core.py                  # Core architecture with immutable grid
-├── waveform_segments.py         # Example P-wave & QRS modules
+├── waveform_segments.py         # Example P-wave, QRS & T-wave modules
 ├── requirements.txt             # Dependencies
 ├── venv/                        # Virtual environment
 └── Generated plots (in $OUTPUT_DIR):
     ├── ecg_baseline_demo.png
     ├── ecg_modular_architecture.png
-    └── modular_segments_demo.png
+    ├── modular_segments_demo.png
+    ├── clinical_markers_verification.png
+    └── p_wave_clinical_demo.png
 ```
 
 ## Installation
@@ -97,6 +99,32 @@ class PWave(WaveformSegment):
         return time, voltage
 ```
 
+```python
+class QRSComplex(WaveformSegment):
+    def __init__(self, r_amplitude_mv=1.0, duration_ms=100,
+                 q_ratio=0.2, s_ratio=0.3):
+        # Sharp triple-component morphology
+        super().__init__(duration_ms, r_amplitude_mv)
+
+    def generate(self, sampling_rate):
+        # Generate QRS with configurable Q/S ratios
+        return time, voltage
+
+class TWave(WaveformSegment):
+    def __init__(self, amplitude_mv=0.25, duration_ms=160):
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate):
+        # Skewed Gaussian morphology
+        return time, voltage
+```
+
+Key parameters:
+- `r_amplitude_mv`: R-peak amplitude in millivolts
+- `duration_ms`: total QRS or T-wave duration
+- `q_ratio` / `s_ratio`: fraction of R amplitude for Q and S depths
+- `amplitude_mv`: T-wave peak voltage (can be negative)
+
 **Clinical Validation:**
 - Duration must be in clinical range
 - Amplitude must be reasonable
@@ -161,6 +189,15 @@ nsr.apply_to_ecg(ecg)
 ecg.validate_grid_integrity()
 ```
 
+### Arrhythmia-Specific Configuration
+```python
+from waveform_segments import VentricularTachycardia
+
+# Rapid ventricular rhythm with wider QRS
+vt = VentricularTachycardia(heart_rate_bpm=160, duration_sec=3.0)
+vt.apply_to_ecg(ecg)
+```
+
 ### Creating New Arrhythmia Modules
 ```python
 class AtrialFibrillation(ArrhythmiaPattern):
@@ -183,6 +220,13 @@ multi = MultiLeadECG(ecg)
 fig, axes = multi.plot_all_leads()
 ```
 The `ecg-multilead-demo` command produces this example plot.
+
+```python
+# Access a single lead for custom analysis
+lead_v1 = multi.get_lead('V1')
+plt.plot(multi.time, lead_v1)
+```
+See `modular_segments_demo.png` for an example output combining these features.
 
 ## Animation
 Real-time visualization is available using the `ecg-animate` command. It loads
