@@ -181,6 +181,11 @@ fig, axes = multi.plot_all_leads()
 ```
 The `ecg-multilead-demo` command produces this example plot.
 
+## Animation
+Real-time visualization is available using the `ecg-animate` command. It loads
+example segments and plays them back with `matplotlib`'s `FuncAnimation`.
+Pass `--multi` to animate a 12‑lead display generated via `MultiLeadECG`.
+
 ## ⚠️ Critical Rules
 
 ### **NEVER:**
