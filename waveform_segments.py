@@ -70,13 +70,13 @@ class QRSComplex(WaveformSegment):
         Initialize QRS complex.
         
         Clinical Parameters:
-        - Duration: 80-120 ms (normal ventricular depolarization)
+        - Duration: 80-200 ms (normal to prolonged ventricular depolarization)
         - R amplitude: Reference (1.0 mV typical)
         - Q ratio: Q wave depth as fraction of R (0.1-0.3)
         - S ratio: S wave depth as fraction of R (0.2-0.4)
         """
-        if not (80 <= duration_ms <= 120):
-            raise ValueError(f"QRS duration {duration_ms}ms outside clinical range (80-120ms)")
+        if not (80 <= duration_ms <= 200):
+            raise ValueError(f"QRS duration {duration_ms}ms outside clinical range (80-200ms)")
         
         if not (0.5 <= r_amplitude_mv <= 3.0):
             raise ValueError(f"R amplitude {r_amplitude_mv}mV outside clinical range (0.5-3.0mV)")
@@ -165,7 +165,7 @@ class TWave(WaveformSegment):
 class UWave(WaveformSegment):
     """U-wave segment following ventricular repolarization."""
 
-    def __init__(self, amplitude_mv: float = 0.05, duration_ms: float = 80):
+    def __init__(self, amplitude_mv: float = 0.1, duration_ms: float = 80):
         """Initialize U-wave with clinical validation."""
         self._validator = ClinicalValidator()
 
@@ -280,7 +280,7 @@ class AtrialFibrillation(ArrhythmiaPattern):
             pattern.append({'segment': t_wave, 'start_time_sec': tw_start})
 
             uw_start = tw_start + t_wave.duration_ms / 1000.0 + 0.04
-            u_wave = UWave(amplitude_mv=0.05, duration_ms=80)
+            u_wave = UWave(amplitude_mv=0.1, duration_ms=80)
             uw_start = self._validator.snap_to_grid_time(uw_start * 1000) / 1000.0
             pattern.append({'segment': u_wave, 'start_time_sec': uw_start})
 
@@ -346,7 +346,7 @@ def demo_modular_segments(output_dir=None):
     ecg.add_waveform_segment(t_wave, start_time_sec=1.4)
 
     print("Testing U-wave module...")
-    u_wave = UWave(amplitude_mv=0.05, duration_ms=80)
+    u_wave = UWave(amplitude_mv=0.1, duration_ms=80)
     ecg.add_waveform_segment(u_wave, start_time_sec=1.65)
     
     # Validate grid integrity after adding segments
@@ -361,7 +361,7 @@ def demo_modular_segments(output_dir=None):
         "• P-wave: 100ms, 0.15mV\\n"
         "• QRS complex: 100ms, 1.0mV\\n"
         "• T-wave: 160ms, 0.25mV\\n"
-        "• U-wave: 80ms, 0.05mV\\n"
+        "• U-wave: 80ms, 0.1mV\\n"
         "• Grid scaling preserved\\n"
         "• Modules are swappable"
     )
