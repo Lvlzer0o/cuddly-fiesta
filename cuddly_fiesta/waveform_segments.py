@@ -17,6 +17,12 @@ from pathlib import Path
 from .clinical_validator import ClinicalValidator
 from scipy.stats import skewnorm
 
+# Default timing constants used by some arrhythmia patterns.  These values
+# originally lived in ``run.py`` but are duplicated here so the module can be
+# used independently of the demo script.
+DEFAULT_PR_INTERVAL_SEC = 0.16
+NORMAL_BEAT_ST_DURATION_SEC = 0.12
+
 class PWave(WaveformSegment):
     """P-wave segment with clinical accuracy."""
     
