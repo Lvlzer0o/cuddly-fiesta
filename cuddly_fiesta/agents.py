@@ -13,11 +13,11 @@ from pathlib import Path
 from . import ecg_baseline
 from . import p_wave_generator
 from . import waveform_segments
-from . import verify_improvements
 from .ecg_core import ECGCore
 from .waveform_segments import NormalSinusRhythm
 from .clinical_validator import ClinicalValidator
 from .p_wave_summary import print_p_wave_summary
+from .verify_improvements import main as verify_improvements_main
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
