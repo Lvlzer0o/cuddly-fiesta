@@ -57,7 +57,8 @@ class ClinicalValidator:
             'QRS_complex': {'min': 80, 'max': 120, 'target': 100},   # Ventricular depolarization
             'ST_segment': {'min': 80, 'max': 120, 'target': 100},    # Ventricular repolarization plateau
             'T_wave': {'min': 120, 'max': 160, 'target': 140},       # Ventricular repolarization
-            'QT_interval': {'min': 300, 'max': 450, 'target': 400}   # Total ventricular activity
+            'QT_interval': {'min': 300, 'max': 450, 'target': 400},  # Total ventricular activity
+            'U_wave': {'min': 60, 'max': 110, 'target': 80}          # Post-repolarization wave
         }
         
         # Clinical amplitude constraints (relative to R wave = 1.0)
@@ -66,7 +67,8 @@ class ClinicalValidator:
             'Q_wave': {'min': 0.1, 'max': 0.3, 'target': 0.2},
             'R_wave': {'min': 0.8, 'max': 1.0, 'target': 1.0},  # Reference
             'S_wave': {'min': 0.2, 'max': 0.4, 'target': 0.3},
-            'T_wave': {'min': 0.1, 'max': 0.5, 'target': 0.25}
+            'T_wave': {'min': 0.1, 'max': 0.5, 'target': 0.25},
+            'U_wave': {'min': 0.05, 'max': 0.15, 'target': 0.1}
         }
     
     def snap_to_grid_time(self, time_ms):
