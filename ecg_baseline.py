@@ -50,7 +50,7 @@ class ECGBaseline:
         self.large_square_voltage_mv = LARGE_SQUARE_VOLTAGE_MV
         
         # Generate time array
-        self.time = np.linspace(0, duration_sec, self.n_samples)
+        self.time = np.linspace(0, duration_sec, self.n_samples, endpoint=False)
         
         # Generate baseline
         self.baseline = self._generate_baseline()

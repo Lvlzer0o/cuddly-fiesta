@@ -154,7 +154,12 @@ class ClinicalValidator:
         
         # Generate time array
         n_samples = int(snapped_duration * sampling_rate / 1000)
-        time_array = np.linspace(snapped_start/1000, (snapped_start + snapped_duration)/1000, n_samples)
+        time_array = np.linspace(
+            snapped_start / 1000,
+            (snapped_start + snapped_duration) / 1000,
+            n_samples,
+            endpoint=False,
+        )
         
         return time_array, snapped_start, snapped_duration
 
