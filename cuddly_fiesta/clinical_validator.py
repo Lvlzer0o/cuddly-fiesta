@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 import warnings
 import os
 from pathlib import Path
-from ecg_baseline import ECGBaseline
-from grid_constants import (
+from .ecg_baseline import ECGBaseline
+from .grid_constants import (
     SMALL_SQUARE_TIME_SEC,
     SMALL_SQUARE_VOLTAGE_MV,
     LARGE_SQUARE_TIME_SEC,

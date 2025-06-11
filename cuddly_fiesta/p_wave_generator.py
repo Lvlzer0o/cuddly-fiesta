@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import logging
 import os
 from pathlib import Path
-from clinical_validator import ECGSegmentGenerator, ClinicalValidator
+from .clinical_validator import ECGSegmentGenerator, ClinicalValidator
 
 class PWaveGenerator(ECGSegmentGenerator):
     """Generates clinically accurate P-waves with strict validation."""

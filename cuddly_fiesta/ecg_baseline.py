@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
 from pathlib import Path
-from grid_constants import (
+from .grid_constants import (
     PAPER_SPEED_MM_PER_SEC,
     VOLTAGE_SCALE_MM_PER_MV,
     SMALL_SQUARE_TIME_SEC,
