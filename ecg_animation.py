@@ -1,6 +1,6 @@
 """ECG animation utilities using matplotlib."""
 
-from typing import Union
+from typing import Union, Optional
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -91,7 +91,10 @@ def animate_ecg(ecg_source: Union[ECGCore, MultiLeadECG], interval_ms: int = 40)
         raise TypeError("ecg_source must be ECGCore or MultiLeadECG")
 
 
-def main() -> None:
+ani: Optional[FuncAnimation] = None
+
+
+def main() -> Optional[FuncAnimation]:
     """Load example segments and display a real-time animation."""
     import argparse
     from waveform_segments import NormalSinusRhythm
@@ -114,9 +117,11 @@ def main() -> None:
     pattern = NormalSinusRhythm(heart_rate_bpm=70)
     pattern.apply_to_ecg(ecg)
 
+    global ani
     source = MultiLeadECG(ecg) if args.multi else ecg
-    animate_ecg(source, interval_ms=args.interval)
+    ani = animate_ecg(source, interval_ms=args.interval)
     plt.show()
+    return ani
 
 
 if __name__ == "__main__":
