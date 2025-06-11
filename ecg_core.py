@@ -83,7 +83,7 @@ class ECGCore:
         self.n_samples = int(duration_sec * sampling_rate)
         
         # Create time array
-        self.time = np.linspace(0, duration_sec, self.n_samples)
+        self.time = np.linspace(0, duration_sec, self.n_samples, endpoint=False)
         
         # Initialize with isoelectric baseline
         self.voltage = self._generate_baseline()
