@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .clinical_validator import ClinicalValidator, ECGSegmentGenerator
+from .clinical_validator import ECGSegmentGenerator
 
 
 class PWaveGenerator(ECGSegmentGenerator):
@@ -35,7 +35,7 @@ class PWaveGenerator(ECGSegmentGenerator):
         # Ensure validator exists
         if not hasattr(self, "validator"):
             raise RuntimeError(
-                "ClinicalValidator not properly initialized in base class"
+                "Validator not properly initialized in base class"
             )
 
         self.segment_name = "P_wave"

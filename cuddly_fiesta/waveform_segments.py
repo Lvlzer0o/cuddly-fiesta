@@ -29,6 +29,16 @@ from the `cuddly_fiesta` package to function correctly.
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
+from typing import Dict, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import skewnorm
+
+from .clinical_validator import ClinicalValidator
+from .ecg_core import ArrhythmiaPattern, ECGCore, WaveformSegment
 
 __all__ = [
     "PWave",
@@ -46,42 +56,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-"""
-This file is part of the Cuddly Fiesta package.
-
-Cuddly Fiesta is an educational ECG simulation tool that allows users to
-generate and visualize realistic ECG waveforms, including various arrhythmias.
-It provides a modular architecture for creating custom ECG patterns while
-ensuring clinical accuracy and grid integrity.
-
-The waveform segments defined in this module can be used to create ECG
-patterns that adhere to clinical standards. Each segment is designed with
-specific clinical parameters in mind and can be easily swapped or modified
-to create different arrhythmia patterns.
-
-This module is intended for educational purposes and can be used to demonstrate
-the principles of ECG waveform generation, arrhythmia simulation, and clinical
-parameter validation.
-
-For more information, visit:
-
-This file shows how to create plug-and-play waveform modules that:
-1. Never break grid scaling
-2. Can be easily swapped for different arrhythmias
-3. Validate clinical parameters
-"""
-
-import os
-from pathlib import Path
-from typing import Dict, Optional, Tuple
-
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.stats import skewnorm
-
-from .clinical_validator import ClinicalValidator
-from .ecg_core import ArrhythmiaPattern, ECGCore, WaveformSegment
 
 # Default timing constants used by some arrhythmia patterns.  These values
 # originally lived in ``run.py`` but are duplicated here so the module can be
