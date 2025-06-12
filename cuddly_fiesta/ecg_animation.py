@@ -1,6 +1,7 @@
 """ECG animation utilities using matplotlib."""
 
-from typing import Union, Optional
+from typing import Optional, Union
+
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -18,7 +19,7 @@ def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
     ax.set_title("ECG Animation")
     ax.axhline(0, color="gray", linewidth=0.5)
 
-    line, = ax.plot([], [], "k", linewidth=1)
+    (line,) = ax.plot([], [], "k", linewidth=1)
     time = ecg.time
     voltage = ecg.voltage
 
@@ -40,9 +41,24 @@ def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
     )
 
 
-def _animate_multi_lead(multi: MultiLeadECG, interval_ms: int) -> FuncAnimation:
+def _animate_multi_lead(
+    multi: MultiLeadECG, interval_ms: int
+) -> FuncAnimation:
     """Animate all 12 leads in a 4x3 grid."""
-    order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+    order = [
+        "I",
+        "II",
+        "III",
+        "aVR",
+        "aVL",
+        "aVF",
+        "V1",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6",
+    ]
     fig, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, sharey=True)
     lines = []
     for ax, name in zip(axes.ravel(), order):
@@ -52,7 +68,7 @@ def _animate_multi_lead(multi: MultiLeadECG, interval_ms: int) -> FuncAnimation:
         ax.axhline(0, color="gray", linewidth=0.5)
         ax.set_xticks([])
         ax.set_yticks([])
-        line, = ax.plot([], [], "k", linewidth=1)
+        (line,) = ax.plot([], [], "k", linewidth=1)
         lines.append(line)
 
     time = multi.time
@@ -81,7 +97,9 @@ def _animate_multi_lead(multi: MultiLeadECG, interval_ms: int) -> FuncAnimation:
     )
 
 
-def animate_ecg(ecg_source: Union[ECGCore, MultiLeadECG], interval_ms: int = 40) -> FuncAnimation:
+def animate_ecg(
+    ecg_source: Union[ECGCore, MultiLeadECG], interval_ms: int = 40
+) -> FuncAnimation:
     """Animate ECG data from ``ECGCore`` or ``MultiLeadECG``."""
     if isinstance(ecg_source, MultiLeadECG):
         return _animate_multi_lead(ecg_source, interval_ms)
@@ -97,9 +115,12 @@ ani: Optional[FuncAnimation] = None
 def main() -> Optional[FuncAnimation]:
     """Load example segments and display a real-time animation."""
     import argparse
+
     from .waveform_segments import NormalSinusRhythm
 
-    parser = argparse.ArgumentParser(description="Real-time ECG animation demo")
+    parser = argparse.ArgumentParser(
+        description="Real-time ECG animation demo"
+    )
     parser.add_argument(
         "--multi",
         action="store_true",
