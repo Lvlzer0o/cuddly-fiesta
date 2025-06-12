@@ -30,7 +30,7 @@ class MultiLeadECG:
         la = 0.5 * base
         ll = 1.0 * base
 
-        leads: Dict[str, Tuple] = {
+        leads: Dict[str, np.ndarray] = {
             "I": la - ra,
             "II": ll - ra,
             "III": ll - la,
