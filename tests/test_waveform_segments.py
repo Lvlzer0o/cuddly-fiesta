@@ -1,18 +1,20 @@
 import unittest
+
 import matplotlib
+
 matplotlib.use("Agg")
 
 from cuddly_fiesta.clinical_validator import ClinicalValidator
+from cuddly_fiesta.ecg_animation import animate_ecg
 from cuddly_fiesta.ecg_core import ECGCore, GridScaling
+from cuddly_fiesta.multi_lead import MultiLeadECG
 from cuddly_fiesta.waveform_segments import (
+    AtrialFibrillation,
+    NormalSinusRhythm,
     TWave,
     UWave,
-    NormalSinusRhythm,
-    AtrialFibrillation,
     VentricularTachycardia,
 )
-from cuddly_fiesta.multi_lead import MultiLeadECG
-from cuddly_fiesta.ecg_animation import animate_ecg
 
 
 class TestWaves(unittest.TestCase):
@@ -22,17 +24,25 @@ class TestWaves(unittest.TestCase):
 
     def test_twave_defaults(self):
         tw = TWave()
-        valid_timing, msg_timing = self.validator.validate_timing("T_wave", tw.duration_ms)
+        valid_timing, msg_timing = self.validator.validate_timing(
+            "T_wave", tw.duration_ms
+        )
         self.assertTrue(valid_timing, msg_timing)
-        valid_amp, msg_amp = self.validator.validate_amplitude("T_wave", abs(tw.amplitude_mv))
+        valid_amp, msg_amp = self.validator.validate_amplitude(
+            "T_wave", abs(tw.amplitude_mv)
+        )
         self.assertTrue(valid_amp, msg_amp)
         self.assertTrue(self.grid.validate_timing(tw.duration_ms))
 
     def test_uwave_defaults(self):
         uw = UWave()
-        valid_timing, msg_timing = self.validator.validate_timing("U_wave", uw.duration_ms)
+        valid_timing, msg_timing = self.validator.validate_timing(
+            "U_wave", uw.duration_ms
+        )
         self.assertTrue(valid_timing, msg_timing)
-        valid_amp, msg_amp = self.validator.validate_amplitude("U_wave", abs(uw.amplitude_mv))
+        valid_amp, msg_amp = self.validator.validate_amplitude(
+            "U_wave", abs(uw.amplitude_mv)
+        )
         self.assertTrue(valid_amp, msg_amp)
         self.assertTrue(self.grid.validate_timing(uw.duration_ms))
 
@@ -43,9 +53,15 @@ class TestArrhythmiaPatterns(unittest.TestCase):
         pattern.apply_to_ecg(ecg)
         grid = GridScaling()
         for info in ecg.segments_added:
-            self.assertTrue(grid.validate_timing(info["start_time"] * 1000), f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned")
+            self.assertTrue(
+                grid.validate_timing(info["start_time"] * 1000),
+                f"Segment {info['segment'].__class__.__name__} start time {info['start_time']:.3f}s not grid aligned",
+            )
             seg = info["segment"]
-            self.assertTrue(grid.validate_timing(seg.duration_ms), f"Segment {seg.__class__.__name__} duration {seg.duration_ms}ms not grid aligned")
+            self.assertTrue(
+                grid.validate_timing(seg.duration_ms),
+                f"Segment {seg.__class__.__name__} duration {seg.duration_ms}ms not grid aligned",
+            )
 
     def test_all_patterns_grid_alignment(self):
         self._check_pattern(NormalSinusRhythm())
