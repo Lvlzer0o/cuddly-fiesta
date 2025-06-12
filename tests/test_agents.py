@@ -1,6 +1,6 @@
-import unittest
 import os
 import tempfile
+import unittest
 
 from cuddly_fiesta import agents
 
