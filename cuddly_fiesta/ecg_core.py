@@ -366,7 +366,7 @@ def main():
     # Create ECG core with immutable grid scaling
     ecg = ECGCore(duration_sec=6, sampling_rate=1000)
 
-    print(f"✅ ECG Core initialized:")
+    print("✅ ECG Core initialized:")
     print(f"   Duration: {ecg.duration_sec} sec")
     print(f"   Sampling rate: {ecg.sampling_rate} Hz")
     print(

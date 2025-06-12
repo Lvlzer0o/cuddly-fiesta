@@ -17,7 +17,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .clinical_validator import ClinicalValidator, ECGSegmentGenerator
+from .clinical_validator import ECGSegmentGenerator
 
 
 class PWaveGenerator(ECGSegmentGenerator):
@@ -35,7 +35,7 @@ class PWaveGenerator(ECGSegmentGenerator):
         # Ensure validator exists
         if not hasattr(self, "validator"):
             raise RuntimeError(
-                "ClinicalValidator not properly initialized in base class"
+                "Validator not properly initialized in base class"
             )
 
         self.segment_name = "P_wave"
@@ -129,13 +129,13 @@ class PWaveGenerator(ECGSegmentGenerator):
         }
 
     @staticmethod
-    def _raised_cosine_window(n, fraction=0.1):
         """
         Generate a raised cosine window for smooth onset/offset transitions.
 
         Args:
             n: Number of samples in the window
-            fraction: Fraction of total duration to apply the window (0-1)
+            fraction: Fraction of total duration used for the rise and fall
+                portions of the window (0-1)
 
         Returns:
             Window array with values from 0 to 1
@@ -143,9 +143,13 @@ class PWaveGenerator(ECGSegmentGenerator):
         if n == 0:
             return np.array([])
 
-        # Create raised cosine window (Hann-like but more gradual)
-        t = np.linspace(-np.pi / 2, np.pi / 2, n)
-        return 0.5 * (1 + np.sin(t))
+        ramp_len = max(1, int(n * fraction))
+        t = np.linspace(-np.pi / 2, np.pi / 2, ramp_len)
+        ramp = 0.5 * (1 + np.sin(t))
+        window = np.ones(n)
+        window[:ramp_len] = ramp
+        window[-ramp_len:] = ramp[::-1]
+        return window
 
     def _generate_p_wave_morphology(
         self, time_array, start_time_sec, duration_sec, amplitude_mv
@@ -252,7 +256,7 @@ class PWaveGenerator(ECGSegmentGenerator):
 
         # Plot in isolation
         if save_plot:
-            fig, ax = self.plot_segment_isolation(
+            self.plot_segment_isolation(
                 p_wave_data["time"],
                 p_wave_data["voltage"],
                 "P-Wave",
