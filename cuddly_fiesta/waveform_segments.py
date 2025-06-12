@@ -196,7 +196,6 @@ class QRSComplex(WaveformSegment):
         # Define component timing (sharp transitions)
         q_end = 0.3  # Q wave ends at 30% of QRS duration
         r_peak = 0.5  # R wave peaks at 50% of QRS duration
-        s_end = 1.0  # S wave ends at 100% of QRS duration
 
         voltage = np.zeros(n_samples)
 
@@ -445,7 +444,6 @@ class AtrialFibrillation(ArrhythmiaPattern):
         rng = np.random.default_rng(0)
         t = 0.0
 
-        mod = self.lead_modifiers.get("II", {})
         while t < self.duration_sec:
             mod = self.lead_modifiers.get("II", {})
             qrs = LeadQRSComplex(
@@ -500,10 +498,6 @@ class VentricularTachycardia(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
 
         while t < self.duration_sec:
             mod = self.lead_modifiers.get("II", {})
@@ -704,9 +698,9 @@ class AtrialFlutter(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
-        mod = self.lead_modifiers.get("II", {})
 
         while t < self.duration_sec:
+            mod = self.lead_modifiers.get("II", {})
             # First flutter wave
             f1_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
             f1 = PWave(amplitude_mv=0.1, duration_ms=100)

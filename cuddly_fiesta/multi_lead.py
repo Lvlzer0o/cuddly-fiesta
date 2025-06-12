@@ -1,7 +1,7 @@
 """Multi-lead ECG utilities."""
 
 import csv
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,6 +16,8 @@ class MultiLeadECG:
     def __init__(self, ecg: ECGCore):
         self.ecg = ecg
         self.time = ecg.time
+        # Helper for drawing the grid when plotting. Lazily initialised.
+        self._baseline_grid_helper: Optional[ECGBaseline] = None
         self._generate_leads()
 
     def _generate_leads(self) -> None:
@@ -28,15 +30,14 @@ class MultiLeadECG:
         la = 0.5 * base
         ll = 1.0 * base
 
-        leads: Dict[str, Tuple] = {}
-        leads["I"] = la - ra
-        leads["II"] = ll - ra
-        leads["III"] = ll - la
-
-        # Augmented limb leads
-        leads["aVR"] = ra - (la + ll) / 2
-        leads["aVL"] = la - (ra + ll) / 2
-        leads["aVF"] = ll - (ra + la) / 2
+        leads: Dict[str, Tuple] = {
+            "I": la - ra,
+            "II": ll - ra,
+            "III": ll - la,
+            "aVR": ra - (la + ll) / 2,
+            "aVL": la - (ra + ll) / 2,
+            "aVF": ll - (ra + la) / 2,
+        }
 
         # Wilson central terminal
         wct = (ra + la + ll) / 3
@@ -99,7 +100,7 @@ class MultiLeadECG:
             ax.axhline(0, color="gray", linewidth=0.5)
             if with_grid:
                 # Reuse a single ECGBaseline instance for grid plotting
-                if not hasattr(self, "_baseline_grid_helper"):
+                if self._baseline_grid_helper is None:
                     self._baseline_grid_helper = ECGBaseline(
                         self.ecg.duration_sec, self.ecg.sampling_rate
                     )

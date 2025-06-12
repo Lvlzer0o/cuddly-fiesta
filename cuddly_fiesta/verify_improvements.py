@@ -129,7 +129,6 @@ def show_timing_verification():
     # Extract the baseline data around calibration pulse
     data = ecg.get_baseline_data()
     time = data["time"]
-    baseline = data["baseline"]
 
     # Find where calibration pulse should be (0.2 to 0.4 seconds)
     cal_start_idx = int(0.2 * 1000)  # 200ms in samples
