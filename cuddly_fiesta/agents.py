@@ -10,14 +10,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from . import ecg_baseline
-from . import p_wave_generator
-from . import waveform_segments
-from .ecg_core import ECGCore
-from .waveform_segments import NormalSinusRhythm
+from . import ecg_baseline, p_wave_generator, waveform_segments
 from .clinical_validator import ClinicalValidator
+from .ecg_core import ECGCore
 from .p_wave_summary import print_p_wave_summary
 from .verify_improvements import main as verify_improvements_main
+from .waveform_segments import NormalSinusRhythm
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +36,7 @@ def run_all() -> None:
     # Demonstrate waveform segment modules
     waveform_segments.demo_modular_segments()
     waveform_segments.demo_arrhythmia_pattern_swap()
-    
+
     # Run additional demo modules
     p_wave_generator.main()
     waveform_segments.main()
@@ -64,7 +62,7 @@ def health_check() -> bool:
     pattern = NormalSinusRhythm(heart_rate_bpm=60)
     pattern.apply_to_ecg(ecg)
     ok = ecg.validate_grid_integrity()
-    
+
     # Also check the clinical validator
     try:
         ClinicalValidator()
@@ -84,7 +82,7 @@ def health_check() -> bool:
 def report() -> None:
     """Generate and print a summary report of library status."""
     print_p_wave_summary()
-    
+
 
 def generate_report(output_path: str = "agents_report.txt") -> Path:
     """Generate a short text report summarizing library status."""

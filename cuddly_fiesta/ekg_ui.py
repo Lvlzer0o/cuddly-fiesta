@@ -5,14 +5,14 @@ from tkinter import ttk
 from typing import Dict, Type
 
 import matplotlib
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from .ecg_core import ECGCore
+from .ecg_core import ArrhythmiaPattern, ECGCore
 from .multi_lead import MultiLeadECG
 from .waveform_segments import (
-    NormalSinusRhythm,
     AtrialFibrillation,
+    NormalSinusRhythm,
     VentricularTachycardia,
 )
 
@@ -98,7 +98,9 @@ class ECGGui:
         highlight_menu.pack(side=tk.LEFT, padx=5)
 
     def _create_figure(self) -> None:
-        self.fig, self.axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, sharey=True)
+        self.fig, self.axes = plt.subplots(
+            4, 3, figsize=(12, 8), sharex=True, sharey=True
+        )
         plt.tight_layout()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
@@ -122,7 +124,9 @@ class ECGGui:
             ax.set_xticks([])
             ax.set_yticks([])
 
-        self.lines = [ax.plot([], [], "k", linewidth=1)[0] for ax in self.axes.ravel()]
+        self.lines = [
+            ax.plot([], [], "k", linewidth=1)[0] for ax in self.axes.ravel()
+        ]
         self.frame_idx = 0
         self._apply_highlight()
         self.canvas.draw()
@@ -146,7 +150,9 @@ class ECGGui:
         """
         if not self.running:
             return
-        base_samples_per_update = (1000 * self.interval_ms) / 1000.0 # Assumes 1000Hz sampling rate
+        base_samples_per_update = (
+            1000 * self.interval_ms
+        ) / 1000.0  # Assumes 1000Hz sampling rate
         step = max(1, int(base_samples_per_update * self.playback_speed.get()))
         self.frame_idx = (self.frame_idx + step) % len(self.time)
         for ln, data in zip(self.lines, self.leads):
