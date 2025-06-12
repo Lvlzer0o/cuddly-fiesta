@@ -29,6 +29,16 @@ from the `cuddly_fiesta` package to function correctly.
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
+from typing import Dict, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import skewnorm
+
+from .clinical_validator import ClinicalValidator
+from .ecg_core import ArrhythmiaPattern, ECGCore, WaveformSegment
 
 __all__ = [
     "PWave",
@@ -46,42 +56,6 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-
-"""
-This file is part of the Cuddly Fiesta package.
-
-Cuddly Fiesta is an educational ECG simulation tool that allows users to
-generate and visualize realistic ECG waveforms, including various arrhythmias.
-It provides a modular architecture for creating custom ECG patterns while
-ensuring clinical accuracy and grid integrity.
-
-The waveform segments defined in this module can be used to create ECG
-patterns that adhere to clinical standards. Each segment is designed with
-specific clinical parameters in mind and can be easily swapped or modified
-to create different arrhythmia patterns.
-
-This module is intended for educational purposes and can be used to demonstrate
-the principles of ECG waveform generation, arrhythmia simulation, and clinical
-parameter validation.
-
-For more information, visit:
-
-This file shows how to create plug-and-play waveform modules that:
-1. Never break grid scaling
-2. Can be easily swapped for different arrhythmias
-3. Validate clinical parameters
-"""
-
-import os
-from pathlib import Path
-from typing import Dict, Optional, Tuple
-
-import matplotlib.pyplot as plt
-import numpy as np
-from scipy.stats import skewnorm
-
-from .clinical_validator import ClinicalValidator
-from .ecg_core import ArrhythmiaPattern, ECGCore, WaveformSegment
 
 # Default timing constants used by some arrhythmia patterns.  These values
 # originally lived in ``run.py`` but are duplicated here so the module can be
@@ -196,7 +170,6 @@ class QRSComplex(WaveformSegment):
         # Define component timing (sharp transitions)
         q_end = 0.3  # Q wave ends at 30% of QRS duration
         r_peak = 0.5  # R wave peaks at 50% of QRS duration
-        s_end = 1.0  # S wave ends at 100% of QRS duration
 
         voltage = np.zeros(n_samples)
 
@@ -445,7 +418,6 @@ class AtrialFibrillation(ArrhythmiaPattern):
         rng = np.random.default_rng(0)
         t = 0.0
 
-        mod = self.lead_modifiers.get("II", {})
         while t < self.duration_sec:
             mod = self.lead_modifiers.get("II", {})
             qrs = LeadQRSComplex(
@@ -500,10 +472,6 @@ class VentricularTachycardia(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
-        mod = self.lead_modifiers.get("II", {})
 
         while t < self.duration_sec:
             mod = self.lead_modifiers.get("II", {})
@@ -704,9 +672,9 @@ class AtrialFlutter(ArrhythmiaPattern):
     def define_pattern(self) -> list:
         pattern = []
         t = 0.0
-        mod = self.lead_modifiers.get("II", {})
 
         while t < self.duration_sec:
+            mod = self.lead_modifiers.get("II", {})
             # First flutter wave
             f1_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
             f1 = PWave(amplitude_mv=0.1, duration_ms=100)
