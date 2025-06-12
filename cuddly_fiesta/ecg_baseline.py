@@ -185,7 +185,8 @@ class ECGBaseline:
         # Emphasize zero line (isoelectric baseline)
         ax.axhline(0, color="red", linewidth=1.5, alpha=0.9)
 
-    def _add_ecg_markers(self, ax):
+    @staticmethod
+    def _add_ecg_markers(ax):
         """Add clinical ECG markers for paper speed and voltage scale."""
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -240,7 +241,8 @@ class ECGBaseline:
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.9),
         )
 
-    def _add_calibration_pulse(self, ax):
+    @staticmethod
+    def _add_calibration_pulse(ax):
         """Add standard 1mV calibration pulse - perfect rectangle."""
         # Standard calibration: 1mV pulse, 200ms duration
         cal_duration = 0.2  # seconds
