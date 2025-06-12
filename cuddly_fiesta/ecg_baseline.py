@@ -12,7 +12,6 @@ Standard ECG Parameters:
 import os
 from pathlib import Path
 
-import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
