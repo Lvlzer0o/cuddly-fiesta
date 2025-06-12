@@ -128,7 +128,8 @@ class PWaveGenerator(ECGSegmentGenerator):
             "segment_name": self.segment_name,
         }
 
-    def _raised_cosine_window(self, n, fraction=0.1):
+    @staticmethod
+    def _raised_cosine_window(n, fraction=0.1):
         """
         Generate a raised cosine window for smooth onset/offset transitions.
 
