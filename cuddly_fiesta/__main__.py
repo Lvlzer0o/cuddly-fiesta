@@ -6,24 +6,22 @@ launching the GUI, or running agent demos.
 
 Use `python -m cuddly_fiesta --help` for usage details.
 """
+
 import argparse
-from typing import Optional, List
+from typing import List, Optional
+
 import matplotlib.pyplot as plt
 
-from . import ecg_baseline, ecg_animation, ekg_ui, agents
+from . import agents, ecg_baseline, ekg_ui
+from .ecg_animation import animate_ecg
 from .ecg_core import ECGCore
 from .multi_lead import MultiLeadECG
-from .ecg_animation import animate_ecg
-from .waveform_segments import (
-    NormalSinusRhythm,
-    demo_normal,
-    demo_afib,
-)
+from .waveform_segments import NormalSinusRhythm, demo_afib, demo_normal
 
 
 def _cmd_baseline(_args: argparse.Namespace) -> None:
     """Handles the 'baseline' subcommand.
-    
+
     Generates and displays a baseline ECG plot by calling `ecg_baseline.main()`.
     The `_args` parameter is currently unused by this specific command.
     """
@@ -32,7 +30,7 @@ def _cmd_baseline(_args: argparse.Namespace) -> None:
 
 def _cmd_animate(args: argparse.Namespace) -> None:
     """Handles the 'animate' subcommand.
-    
+
     Creates an ECG animation with optional multi-lead display.
     """
     ecg = ECGCore(duration_sec=2, sampling_rate=1000)
@@ -44,7 +42,7 @@ def _cmd_animate(args: argparse.Namespace) -> None:
 
 def _cmd_gui(_args: argparse.Namespace) -> None:
     """Handles the 'gui' subcommand.
-    
+
     Launches the Tk-based GUI interface.
     """
     ekg_ui.main()
@@ -77,7 +75,9 @@ def _cmd_agent_report(_args: argparse.Namespace) -> None:
 
 def main(argv: Optional[List[str]] = None) -> None:
     """Main entry point for the command-line interface."""
-    parser = argparse.ArgumentParser(prog="cuddly_fiesta", description="ECG generator utilities")
+    parser = argparse.ArgumentParser(
+        prog="cuddly_fiesta", description="ECG generator utilities"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     # Baseline command
@@ -94,8 +94,12 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     # Animation command
     p_anim = sub.add_parser("animate", help="run ECG animation")
-    p_anim.add_argument("--multi", action="store_true", help="use 12-lead animation")
-    p_anim.add_argument("--interval", type=int, default=40, help="animation interval ms")
+    p_anim.add_argument(
+        "--multi", action="store_true", help="use 12-lead animation"
+    )
+    p_anim.add_argument(
+        "--interval", type=int, default=40, help="animation interval ms"
+    )
     p_anim.set_defaults(func=_cmd_animate)
 
     # GUI command
@@ -105,13 +109,15 @@ def main(argv: Optional[List[str]] = None) -> None:
     # Agent commands
     p_agent = sub.add_parser("agent", help="agent utilities")
     agent_sub = p_agent.add_subparsers(dest="agent_cmd", required=True)
-    
+
     p_run_all = agent_sub.add_parser("run-all", help="run full demo suite")
     p_run_all.set_defaults(func=_cmd_agent_run_all)
-    
-    p_health = agent_sub.add_parser("health-check", help="run system health check")
+
+    p_health = agent_sub.add_parser(
+        "health-check", help="run system health check"
+    )
     p_health.set_defaults(func=_cmd_agent_health_check)
-    
+
     p_report = agent_sub.add_parser("report", help="generate agent report")
     p_report.set_defaults(func=_cmd_agent_report)
 
