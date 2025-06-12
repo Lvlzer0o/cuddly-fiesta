@@ -196,7 +196,8 @@ class ECGBaseline:
         # Emphasize zero line (isoelectric baseline)
         ax.axhline(0, color="red", linewidth=1.5, alpha=0.9)
 
-    def _add_ecg_markers(self, ax):
+    @staticmethod
+    def _add_ecg_markers(ax):
         """Add clinical ECG markers for paper speed and voltage scale."""
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -245,7 +246,8 @@ class ECGBaseline:
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.9),
         )
 
-    def _add_calibration_pulse(self, ax):
+    @staticmethod
+    def _add_calibration_pulse(ax):
         """Add standard 1mV calibration pulse - perfect rectangle."""
         cal_duration = 0.2  # seconds
         cal_amplitude = 1.0  # mV
@@ -977,15 +979,14 @@ class MultiLeadECG:
         la = 0.5 * base
         ll = 1.0 * base
 
-        leads: Dict[str, np.ndarray] = {}
-        leads["I"] = la - ra
-        leads["II"] = ll - ra
-        leads["III"] = ll - la
-
-        # Augmented limb leads
-        leads["aVR"] = ra - (la + ll) / 2
-        leads["aVL"] = la - (ra + ll) / 2
-        leads["aVF"] = ll - (ra + la) / 2
+        leads: Dict[str, np.ndarray] = {
+            "I": la - ra,
+            "II": ll - ra,
+            "III": ll - la,
+            "aVR": ra - (la + ll) / 2,
+            "aVL": la - (ra + ll) / 2,
+            "aVF": ll - (ra + la) / 2,
+        }
 
         # Wilson central terminal
         wct = (ra + la + ll) / 3
@@ -1267,6 +1268,8 @@ if HAS_TKINTER:
                 4, 3, figsize=(12, 8), sharex=True, sharey=True
             )
             plt.tight_layout()
+            if FigureCanvasTkAgg is None:
+                raise RuntimeError("Tkinter backend is not available")
             self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
             self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
