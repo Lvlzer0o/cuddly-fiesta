@@ -1,8 +1,8 @@
 [console_scripts]
-ecg-animate = ecg_animation:main
-ecg-core-demo = ecg_core:main
-ecg-gui = ekg_ui:main
-ecg-multilead-demo = multi_lead:main
-p-wave-generator = p_wave_generator:main
-p-wave-summary = p_wave_summary:print_p_wave_summary
-verify-improvements = verify_improvements:main
+ecg-animate = cuddly_fiesta.ecg_animation:main
+ecg-core-demo = cuddly_fiesta.ecg_core:main
+ecg-gui = cuddly_fiesta.ekg_ui:main
+ecg-multilead-demo = cuddly_fiesta.multi_lead:main
+p-wave-generator = cuddly_fiesta.p_wave_generator:main
+p-wave-summary = cuddly_fiesta.p_wave_summary:print_p_wave_summary
+verify-improvements = cuddly_fiesta.verify_improvements:main

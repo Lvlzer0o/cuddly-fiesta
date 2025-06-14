@@ -1009,19 +1009,18 @@ class MultiLeadECG:
             4, 3, figsize=figure_size, sharex=True, sharey=True
         )
         order = [
-            "I",
-            "II",
-            "III",
-            "aVR",
-            "aVL",
-            "aVF",
-            "V1",
-            "V2",
-            "V3",
-            "V4",
-            "V5",
-            "V6",
+            "I", "II", "III",
+            "aVR", "aVL", "aVF",
+            "V1", "V2", "V3",
+            "V4", "V5", "V6"
         ]
+
+        # Initialize the grid helper if needed
+        if with_grid and self._baseline_grid_helper is None:
+            self._baseline_grid_helper = ECGBaseline(
+                duration_sec=self.ecg.duration_sec,
+                sampling_rate=self.ecg.sampling_rate
+            )
 
         for ax, name in zip(axes.ravel(), order):
             ax.plot(self.time, self.leads[name], "k", linewidth=1)
@@ -1031,11 +1030,7 @@ class MultiLeadECG:
             ax.set_xticks([])
             ax.set_yticks([])
             ax.axhline(0, color="gray", linewidth=0.5)
-            if with_grid:
-                if not hasattr(self, "_baseline_grid_helper"):
-                    self._baseline_grid_helper = ECGBaseline(
-                        self.ecg.duration_sec, self.ecg.sampling_rate
-                    )
+            if with_grid and self._baseline_grid_helper is not None:
                 self._baseline_grid_helper._add_ecg_grid(ax)
 
         fig.suptitle("12-Lead ECG", fontsize=14, fontweight="bold")
