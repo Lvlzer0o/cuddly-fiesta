@@ -347,7 +347,7 @@ class AdvancedNormalSinusRhythm(ArrhythmiaPattern):
         qrs_complex = AdvancedQRSComplex(r_amplitude_mv=1.0, duration_ms=100)
         t_wave = AdvancedTWave(amplitude_mv=0.25, duration_ms=160)
 
-        pr_interval_sec = 0.16
+        pr_interval_sec = DEFAULT_PR_INTERVAL_SEC
         qrs_start = pr_interval_sec
 
         pattern.append({'segment': p_wave, 'start_time_sec': 0.0})
