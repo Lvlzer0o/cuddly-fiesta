@@ -15,6 +15,8 @@ from .waveform_segments import (
     AtrialFibrillation,
     NormalSinusRhythm,
     VentricularTachycardia,
+    VentricularFibrillation,
+    PulselessElectricalActivity,
 )
 
 # Ensure Tkinter backend for matplotlib
@@ -40,6 +42,8 @@ class ECGGui:
             "Normal Sinus Rhythm": NormalSinusRhythm,
             "Atrial Fibrillation": AtrialFibrillation,
             "Ventricular Tachycardia": VentricularTachycardia,
+            "Ventricular Fibrillation": VentricularFibrillation,
+            "Pulseless Electrical Activity": PulselessElectricalActivity,
         }
 
         self._create_controls()

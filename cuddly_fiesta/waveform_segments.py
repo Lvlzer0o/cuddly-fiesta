@@ -53,6 +53,8 @@ __all__ = [
     "PrematureVentricularContraction",
     "SecondDegreeAVBlock",
     "AtrialFlutter",
+    "VentricularFibrillation",
+    "PulselessElectricalActivity",
 ]
 
 logger = logging.getLogger(__name__)
@@ -712,6 +714,47 @@ class AtrialFlutter(ArrhythmiaPattern):
             t += self.rr_interval
 
         return pattern
+
+
+class VentricularFibrillation(ArrhythmiaPattern):
+    """Chaotic ventricular fibrillation pattern."""
+
+    def __init__(self, duration_sec: float = 3.0, lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Ventricular Fibrillation", lead_modifiers)
+        self.duration_sec = duration_sec
+        self._validator = ClinicalValidator()
+
+    def define_pattern(self) -> list:
+        pattern = []
+        rng = np.random.default_rng(0)
+        t = 0.0
+        while t < self.duration_sec:
+            mod = self.lead_modifiers.get("II", {})
+            amp = rng.uniform(0.5, 1.5)
+            qrs = LeadQRSComplex(
+                "II",
+                **mod,
+                r_amplitude_mv=amp,
+                duration_ms=80,
+                q_ratio=0.1,
+                s_ratio=0.1,
+            )
+            start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
+            pattern.append({"segment": qrs, "start_time_sec": start})
+            t += rng.uniform(0.15, 0.25)
+        return pattern
+
+
+class PulselessElectricalActivity(ArrhythmiaPattern):
+    """Flatline/asystole pattern representing PEA."""
+
+    def __init__(self, duration_sec: float = 3.0, lead_modifiers: Optional[Dict[str, Dict]] = None):
+        super().__init__("Pulseless Electrical Activity", lead_modifiers)
+        self.duration_sec = duration_sec
+
+    def define_pattern(self) -> list:
+        # No organized electrical activity beyond baseline noise
+        return []
 
 
 def demo_modular_segments(output_dir=None):
