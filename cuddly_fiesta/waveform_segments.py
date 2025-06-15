@@ -50,6 +50,8 @@ __all__ = [
     "LeadQRSComplex",
     "LeadTWave",
     "NormalSinusRhythm",
+    "SinusBradycardia",
+    "SinusTachycardia",
     "AtrialFibrillation",
     "VentricularTachycardia",
     "PrematureVentricularContraction",
@@ -430,6 +432,88 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         t_wave_start = (
             qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
         )
+
+        pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
+
+        return pattern
+
+
+class SinusBradycardia(ArrhythmiaPattern):
+    """Sinus rhythm with a slow heart rate."""
+
+    def __init__(
+        self,
+        heart_rate_bpm: int = 50,
+        lead_modifiers: Optional[Dict[str, Dict]] = None,
+    ):
+        super().__init__("Sinus Bradycardia", lead_modifiers)
+
+        if not (30 <= heart_rate_bpm < 60):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm}bpm is outside the bradycardia range of 30-59 bpm."
+            )
+
+        self.heart_rate_bpm = heart_rate_bpm
+        self.rr_interval_sec = 60.0 / heart_rate_bpm
+
+    def define_pattern(self) -> list:
+        """Define sinus bradycardia pattern."""
+        pattern = []
+
+        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
+        mod = self.lead_modifiers.get("II", {})
+        qrs_complex = LeadQRSComplex("II", **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = LeadTWave("II", **mod, amplitude_mv=0.25, duration_ms=160)
+
+        pr_interval_sec = DEFAULT_PR_INTERVAL_SEC
+        qrs_start = pr_interval_sec
+
+        pattern.append({"segment": p_wave, "start_time_sec": 0.0})
+        pattern.append({"segment": qrs_complex, "start_time_sec": qrs_start})
+
+        st_duration = NORMAL_BEAT_ST_DURATION_SEC
+        t_wave_start = qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
+
+        pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
+
+        return pattern
+
+
+class SinusTachycardia(ArrhythmiaPattern):
+    """Sinus rhythm with an elevated heart rate."""
+
+    def __init__(
+        self,
+        heart_rate_bpm: int = 120,
+        lead_modifiers: Optional[Dict[str, Dict]] = None,
+    ):
+        super().__init__("Sinus Tachycardia", lead_modifiers)
+
+        if not (heart_rate_bpm > 100 and heart_rate_bpm <= 180):
+            raise ValueError(
+                f"Heart rate {heart_rate_bpm}bpm is outside the tachycardia range of 101-180 bpm."
+            )
+
+        self.heart_rate_bpm = heart_rate_bpm
+        self.rr_interval_sec = 60.0 / heart_rate_bpm
+
+    def define_pattern(self) -> list:
+        """Define sinus tachycardia pattern."""
+        pattern = []
+
+        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
+        mod = self.lead_modifiers.get("II", {})
+        qrs_complex = LeadQRSComplex("II", **mod, r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = LeadTWave("II", **mod, amplitude_mv=0.25, duration_ms=160)
+
+        pr_interval_sec = DEFAULT_PR_INTERVAL_SEC
+        qrs_start = pr_interval_sec
+
+        pattern.append({"segment": p_wave, "start_time_sec": 0.0})
+        pattern.append({"segment": qrs_complex, "start_time_sec": qrs_start})
+
+        st_duration = NORMAL_BEAT_ST_DURATION_SEC
+        t_wave_start = qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
 
         pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
 
