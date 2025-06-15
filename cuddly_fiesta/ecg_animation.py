@@ -2,6 +2,8 @@
 
 from typing import Optional, Union
 
+from .ecg_baseline import ECGBaseline
+
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -9,7 +11,9 @@ from .ecg_core import ECGCore
 from .multi_lead import MultiLeadECG
 
 
-def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
+def _animate_single_lead(
+    ecg: ECGCore, interval_ms: int, show_grid: bool
+) -> FuncAnimation:
     """Animate a single-lead ECG."""
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.set_xlim(0, ecg.duration_sec)
@@ -18,6 +22,10 @@ def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
     ax.set_ylabel("Voltage (mV)")
     ax.set_title("ECG Animation")
     ax.axhline(0, color="gray", linewidth=0.5)
+
+    if show_grid:
+        temp_baseline = ECGBaseline(ecg.duration_sec, ecg.sampling_rate)
+        temp_baseline._add_ecg_grid(ax)
 
     (line,) = ax.plot([], [], "k", linewidth=1)
     time = ecg.time
@@ -42,7 +50,7 @@ def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
 
 
 def _animate_multi_lead(
-    multi: MultiLeadECG, interval_ms: int
+    multi: MultiLeadECG, interval_ms: int, show_grid: bool
 ) -> FuncAnimation:
     """Animate all 12 leads in a 4x3 grid."""
     order = [
@@ -61,6 +69,9 @@ def _animate_multi_lead(
     ]
     fig, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, sharey=True)
     lines = []
+    temp_baseline = None
+    if show_grid:
+        temp_baseline = ECGBaseline(multi.ecg.duration_sec, multi.ecg.sampling_rate)
     for ax, name in zip(axes.ravel(), order):
         ax.set_xlim(0, multi.ecg.duration_sec)
         ax.set_ylim(-2, 2)
@@ -68,6 +79,8 @@ def _animate_multi_lead(
         ax.axhline(0, color="gray", linewidth=0.5)
         ax.set_xticks([])
         ax.set_yticks([])
+        if show_grid and temp_baseline is not None:
+            temp_baseline._add_ecg_grid(ax)
         (line,) = ax.plot([], [], "k", linewidth=1)
         lines.append(line)
 
@@ -98,13 +111,15 @@ def _animate_multi_lead(
 
 
 def animate_ecg(
-    ecg_source: Union[ECGCore, MultiLeadECG], interval_ms: int = 40
+    ecg_source: Union[ECGCore, MultiLeadECG],
+    interval_ms: int = 40,
+    show_grid: bool = False,
 ) -> FuncAnimation:
     """Animate ECG data from ``ECGCore`` or ``MultiLeadECG``."""
     if isinstance(ecg_source, MultiLeadECG):
-        return _animate_multi_lead(ecg_source, interval_ms)
+        return _animate_multi_lead(ecg_source, interval_ms, show_grid)
     elif isinstance(ecg_source, ECGCore):
-        return _animate_single_lead(ecg_source, interval_ms)
+        return _animate_single_lead(ecg_source, interval_ms, show_grid)
     else:
         raise TypeError("ecg_source must be ECGCore or MultiLeadECG")
 
@@ -132,6 +147,11 @@ def main() -> Optional[FuncAnimation]:
         default=40,
         help="animation interval in milliseconds",
     )
+    parser.add_argument(
+        "--grid",
+        action="store_true",
+        help="overlay ECG grid on the animation",
+    )
     args = parser.parse_args()
 
     ecg = ECGCore(duration_sec=2, sampling_rate=1000)
@@ -140,7 +160,7 @@ def main() -> Optional[FuncAnimation]:
 
     global ani
     source = MultiLeadECG(ecg) if args.multi else ecg
-    ani = animate_ecg(source, interval_ms=args.interval)
+    ani = animate_ecg(source, interval_ms=args.interval, show_grid=args.grid)
     plt.show()
     return ani
 
