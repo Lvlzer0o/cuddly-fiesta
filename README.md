@@ -47,6 +47,23 @@ pip install -e .
 This makes the console utilities such as `p-wave-generator`,
 `verify-improvements`, and `ecg-multilead-demo` available on your PATH.
 
+### Debian/Ubuntu Setup
+
+On Debian-based Linux distributions install Python and pip with:
+
+```bash
+sudo apt-get update
+sudo apt-get install python3 python3-pip python3-tk
+```
+
+Then install the project dependencies using `pip`:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+After installing the requirements you can run the demo utilities as shown below.
+
 ### Quick Start
 
 Install the core dependencies and run the consolidated entry point:
