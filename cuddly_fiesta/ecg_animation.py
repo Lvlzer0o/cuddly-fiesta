@@ -79,7 +79,7 @@ def _animate_multi_lead(
         ax.axhline(0, color="gray", linewidth=0.5)
         ax.set_xticks([])
         ax.set_yticks([])
-        if show_grid and temp_baseline is not None:
+        if temp_baseline is not None: # temp_baseline is only non-None if show_grid was true
             temp_baseline._add_ecg_grid(ax)
         (line,) = ax.plot([], [], "k", linewidth=1)
         lines.append(line)
