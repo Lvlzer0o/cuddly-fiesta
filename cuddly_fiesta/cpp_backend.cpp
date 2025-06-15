@@ -7,9 +7,14 @@ namespace py = pybind11;
 
 std::vector<double> raised_cosine_window(std::size_t n) {
     std::vector<double> w(n);
+    std::vector<double> w(n);
     if (n == 0) return w;
+    if (n == 1) {
+        w[0] = 0.0; 
+        return w;
+    }
     for (std::size_t i = 0; i < n; ++i) {
-        double t = -M_PI / 2 + (static_cast<double>(i) / (n - 1)) * M_PI;
+        double t = -M_PI / 2.0 + (static_cast<double>(i) / (n - 1)) * M_PI;
         w[i] = 0.5 * (1.0 + std::sin(t));
     }
     return w;
