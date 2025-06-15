@@ -2,7 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Dict, Type
+from typing import Dict, Type, Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from .ecg_core import ArrhythmiaPattern, ECGCore
 from .multi_lead import MultiLeadECG
+from .ecg_baseline import ECGBaseline
 from .waveform_segments import (
     AtrialFibrillation,
     NormalSinusRhythm,
@@ -23,9 +24,12 @@ matplotlib.use("TkAgg")
 class ECGGui:
     """Display a MultiLeadECG in a Tkinter window with basic controls."""
 
-    def __init__(self, master: tk.Tk):
+    def __init__(self, master: tk.Tk, show_grid: bool = False):
         self.master = master
         master.title("ECG Generator GUI")
+
+        self.show_grid = show_grid
+        self._grid_helper = None
 
         self.interval_ms = 40
         self.playback_speed = tk.DoubleVar(value=1.0)
@@ -128,6 +132,12 @@ class ECGGui:
             ax.axhline(0, color="gray", linewidth=0.5)
             ax.set_xticks([])
             ax.set_yticks([])
+            if self.show_grid:
+                if self._grid_helper is None:
+                    self._grid_helper = ECGBaseline(
+                        ecg.duration_sec, ecg.sampling_rate
+                    )
+                self._grid_helper._add_ecg_grid(ax)
 
         self.lines = [
             ax.plot([], [], "k", linewidth=1)[0] for ax in self.axes.ravel()
@@ -173,9 +183,17 @@ class ECGGui:
         self.master.after(self.interval_ms, self._update_plot)
 
 
-def main() -> None:
+def main(argv: Optional[list[str]] = None) -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="ECG GUI")
+    parser.add_argument(
+        "--grid", action="store_true", help="overlay ECG grid on plots"
+    )
+    args = parser.parse_args(argv)
+
     root = tk.Tk()
-    ECGGui(root)
+    ECGGui(root, show_grid=args.grid)
     root.mainloop()
 
 

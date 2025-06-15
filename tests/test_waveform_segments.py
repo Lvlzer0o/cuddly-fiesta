@@ -81,10 +81,10 @@ class TestMultiLeadAndAnimation(unittest.TestCase):
     def test_animation_smoke(self):
         ecg = ECGCore(duration_sec=1, sampling_rate=1000)
         NormalSinusRhythm().apply_to_ecg(ecg)
-        ani1 = animate_ecg(ecg)
+        ani1 = animate_ecg(ecg, show_grid=True)
         self.assertIsNotNone(ani1)
         ml = MultiLeadECG(ecg)
-        ani2 = animate_ecg(ml)
+        ani2 = animate_ecg(ml, show_grid=True)
         self.assertIsNotNone(ani2)
 
 
