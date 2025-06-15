@@ -28,21 +28,6 @@
     └── modular_segments_demo.png
 ```
 
-### Generating Plots Locally
-
-First, ensure you have installed the necessary dependencies:
-
-```bash
-pip install -r requirements.txt
-
-```bash
-python ecg_baseline.py          # creates docs/ecg_baseline_demo.png
-python waveform_segments.py     # creates docs/modular_segments_demo.png
-python p_wave_generator.py      # creates docs/p_wave_clinical_demo.png and p_wave_isolation_test.png
-python verify_improvements.py   # creates docs/calibration_verification.png and docs/clinical_markers_verification.png
-python test_p_wave_fixes.py     # creates docs/p_wave_physiological_verification.png
-```
-
 ## 🧩 Architecture Components
 
 ### 1. **GridScaling Class** (Immutable)
@@ -205,3 +190,18 @@ Ready to implement:
 ```
 
 The architecture ensures clinical accuracy while maintaining code modularity for easy arrhythmia development.
+
+## Running Tests
+
+Install requirements and run the test suite using `pytest`:
+
+```bash
+python -m pip install -r requirements.txt
+python -m pytest
+```
+
+The tests can also be executed with the standard library:
+
+```bash
+python -m unittest discover -s tests
+```
