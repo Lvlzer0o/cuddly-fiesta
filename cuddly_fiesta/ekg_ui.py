@@ -97,6 +97,11 @@ class ECGGui:
         )
         highlight_menu.pack(side=tk.LEFT, padx=5)
 
+        self.toggle_btn = ttk.Button(
+            ctrl_frame, text="Pause", command=self._toggle_running
+        )
+        self.toggle_btn.pack(side=tk.LEFT, padx=5)
+
     def _create_figure(self) -> None:
         self.fig, self.axes = plt.subplots(
             4, 3, figsize=(12, 8), sharex=True, sharey=True
@@ -130,6 +135,13 @@ class ECGGui:
         self.frame_idx = 0
         self._apply_highlight()
         self.canvas.draw()
+
+    def _toggle_running(self) -> None:
+        """Pause or resume the ECG animation."""
+        self.running = not self.running
+        self.toggle_btn.config(text="Resume" if not self.running else "Pause")
+        if self.running:
+            self._update_plot()
 
     def _apply_highlight(self) -> None:
         for ln, name in zip(self.lines, self.order[1:]):
