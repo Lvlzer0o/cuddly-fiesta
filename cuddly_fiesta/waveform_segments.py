@@ -491,7 +491,7 @@ class SinusTachycardia(ArrhythmiaPattern):
 
         if not (heart_rate_bpm > 100 and heart_rate_bpm <= 180):
             raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside tachycardia range (>100 bpm)"
+                f"Heart rate {heart_rate_bpm}bpm is outside the tachycardia range of 101-180 bpm."
             )
 
         self.heart_rate_bpm = heart_rate_bpm
