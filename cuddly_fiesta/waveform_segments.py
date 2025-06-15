@@ -45,6 +45,8 @@ __all__ = [
     "QRSComplex",
     "TWave",
     "UWave",
+    "FibrillationWave",
+    "LeadFibrillationWave",
     "LeadQRSComplex",
     "LeadTWave",
     "NormalSinusRhythm",
@@ -335,6 +337,46 @@ class UWave(WaveformSegment):
 
         voltage = self.amplitude_mv * shape
         return time, voltage
+
+
+class FibrillationWave(WaveformSegment):
+    """Short oscillatory wave used for ventricular fibrillation."""
+
+    def __init__(self, amplitude_mv: float = 1.0, duration_ms: float = 100):
+        super().__init__(duration_ms, amplitude_mv)
+
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
+        """Generate noisy sinusoid representing a fibrillatory wave."""
+        n_samples = int((self.duration_ms / 1000.0) * sampling_rate)
+        time = np.linspace(0, self.duration_ms / 1000.0, n_samples, endpoint=False)
+
+        rng = np.random.default_rng()
+        freq = rng.uniform(5, 10)  # Hz
+        voltage = self.amplitude_mv * np.sin(2 * np.pi * freq * time)
+        noise = 0.05 * self.amplitude_mv * rng.normal(size=n_samples)
+        return time, voltage + noise
+
+
+class LeadFibrillationWave(FibrillationWave):
+    """Fibrillation wave scaled for a specific lead orientation."""
+
+    def __init__(
+        self,
+        lead: str,
+        amplitude_scale: float = 1.0,
+        polarity: float = 1.0,
+        axis_deg: float = 0.0,
+        **kwargs,
+    ):
+        base_amp = (
+            kwargs.get("amplitude_mv", 1.0)
+            * amplitude_scale
+            * polarity
+            * np.cos(np.radians(axis_deg))
+        )
+        kwargs["amplitude_mv"] = base_amp
+        super().__init__(**kwargs)
+        self.lead = lead
 
 
 class NormalSinusRhythm(ArrhythmiaPattern):
@@ -731,22 +773,21 @@ class VentricularFibrillation(ArrhythmiaPattern):
         while t < self.duration_sec:
             mod = self.lead_modifiers.get("II", {})
             amp = rng.uniform(0.5, 1.5)
-            qrs = LeadQRSComplex(
+            dur = rng.uniform(80, 150)
+            wave = LeadFibrillationWave(
                 "II",
                 **mod,
-                r_amplitude_mv=amp,
-                duration_ms=80,
-                q_ratio=0.1,
-                s_ratio=0.1,
+                amplitude_mv=amp,
+                duration_ms=self._validator.snap_to_grid_time(dur),
             )
             start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
-            pattern.append({"segment": qrs, "start_time_sec": start})
-            t += rng.uniform(0.15, 0.25)
+            pattern.append({"segment": wave, "start_time_sec": start})
+            t += wave.duration_ms / 1000.0
         return pattern
 
 
 class PulselessElectricalActivity(ArrhythmiaPattern):
-    """Flatline/asystole pattern representing PEA."""
+    """Models the asystolic (flatline) ECG presentation seen in some PEA cases."""
 
     def __init__(self, duration_sec: float = 3.0, lead_modifiers: Optional[Dict[str, Dict]] = None):
         super().__init__("Pulseless Electrical Activity", lead_modifiers)
