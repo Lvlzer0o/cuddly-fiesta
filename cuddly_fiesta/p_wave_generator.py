@@ -14,10 +14,17 @@ import logging
 import os
 from pathlib import Path
 
+from .path_utils import get_output_dir, validate_output_path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .clinical_validator import ECGSegmentGenerator
+
+try:
+    from . import cpp_backend  # type: ignore
+except Exception:  # pragma: no cover - optional extension
+    cpp_backend = None
 
 
 class PWaveGenerator(ECGSegmentGenerator):
@@ -182,6 +189,12 @@ class PWaveGenerator(ECGSegmentGenerator):
 
         # Clip to ensure we stay within [0,1] range
         t_norm = np.clip(t_norm, 0, 1)
+
+        # Use optimized C++ backend if available
+        if cpp_backend is not None:
+            return np.asarray(
+                cpp_backend.generate_p_wave(t_norm.astype(np.float64), amplitude_mv)
+            )
 
         # Right atrial component (earlier, sharper)
         # Represents faster right atrial depolarization
@@ -389,8 +402,7 @@ class PWaveGenerator(ECGSegmentGenerator):
         plt.tight_layout()
 
         # Save plot
-        out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
-        out_path = out_dir / save_filename
+        out_path = validate_output_path(save_filename, base_dir=output_dir)
         plt.savefig(out_path, dpi=300, bbox_inches="tight")
         plt.close()
 
@@ -403,7 +415,7 @@ def main():
     print("=" * 60)
 
     # Create P-wave generator (no noise for pure testing)
-    output_dir = Path(os.getenv("OUTPUT_DIR", "."))
+    output_dir = get_output_dir()
     p_gen = PWaveGenerator(sampling_rate=1000, enable_noise=False)
 
     # Test in isolation first (REQUIRED)

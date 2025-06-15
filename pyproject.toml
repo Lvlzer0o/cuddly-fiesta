@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=61", "pybind11>=2.10", "numpy==1.21.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,9 +12,9 @@ authors = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.21.0",
-    "matplotlib>=3.5.0",
-    "scipy>=1.7.0",
+    "numpy==1.21.0",
+    "matplotlib==3.5.0",
+    "scipy==1.7.0",
 ]
 
 [project.scripts]
@@ -28,3 +28,4 @@ ecg-gui = "cuddly_fiesta.ekg_ui:main"
 
 [tool.setuptools]
 packages = ["cuddly_fiesta"]
+

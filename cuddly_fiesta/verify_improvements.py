@@ -8,6 +8,8 @@ Quick verification of ECG baseline improvements:
 import os
 from pathlib import Path
 
+from .path_utils import validate_output_path
+
 import matplotlib.pyplot as plt
 
 from .ecg_baseline import ECGBaseline
@@ -64,8 +66,7 @@ def verify_calibration_pulse():
     )
 
     plt.tight_layout()
-    out_dir = Path(os.getenv("OUTPUT_DIR", "."))
-    out_path = out_dir / "calibration_verification.png"
+    out_path = validate_output_path("calibration_verification.png")
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -111,8 +112,7 @@ def verify_clinical_markers():
     )
 
     plt.tight_layout()
-    out_dir = Path(os.getenv("OUTPUT_DIR", "."))
-    out_path = out_dir / "clinical_markers_verification.png"
+    out_path = validate_output_path("clinical_markers_verification.png")
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
 

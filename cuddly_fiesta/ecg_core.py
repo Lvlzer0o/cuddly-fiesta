@@ -15,6 +15,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from .path_utils import validate_output_path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -399,8 +401,7 @@ def main():
     )
 
     plt.tight_layout()
-    out_dir = Path(os.getenv("OUTPUT_DIR", "."))
-    out_path = out_dir / "ecg_modular_architecture.png"
+    out_path = validate_output_path("ecg_modular_architecture.png")
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
 

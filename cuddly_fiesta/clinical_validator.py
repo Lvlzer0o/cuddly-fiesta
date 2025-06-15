@@ -16,6 +16,7 @@ import os
 import warnings
 from pathlib import Path
 
+from .path_utils import get_output_dir, validate_output_path
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -320,8 +321,7 @@ class ECGSegmentGenerator:
         plt.tight_layout()
 
         if save_filename:
-            out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
-            out_path = out_dir / save_filename
+            out_path = validate_output_path(save_filename, base_dir=output_dir)
             plt.savefig(out_path, dpi=300, bbox_inches="tight")
             print(f"✅ {segment_name} isolation test saved as '{out_path}'")
 

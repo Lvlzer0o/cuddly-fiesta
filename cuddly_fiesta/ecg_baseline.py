@@ -12,6 +12,8 @@ Standard ECG Parameters:
 import os
 from pathlib import Path
 
+from .path_utils import get_output_dir, validate_output_path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -313,8 +315,7 @@ class ECGBaseline:
     def save_plot(self, filename="ecg_baseline.png", dpi=300, output_dir=None):
         """Save the baseline plot to file."""
         fig, _ = self.plot_with_grid()
-        out_dir = Path(output_dir or os.getenv("OUTPUT_DIR", "."))
-        out_path = out_dir / filename
+        out_path = validate_output_path(filename, base_dir=output_dir)
         fig.savefig(out_path, dpi=dpi, bbox_inches="tight", facecolor="white")
         plt.close(fig)
         print(f"Baseline plot saved as {out_path}")
@@ -349,7 +350,7 @@ def main(show_plot: bool = False):
         ),
     )
 
-    output_dir = Path(os.getenv("OUTPUT_DIR", "."))
+    output_dir = get_output_dir()
 
     # Save the plot
     ecg_baseline.save_plot("ecg_baseline_demo.png", output_dir=output_dir)

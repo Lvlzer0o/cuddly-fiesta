@@ -3,6 +3,8 @@
 import csv
 from typing import Dict, Tuple, Optional
 
+from .path_utils import validate_output_path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -124,7 +126,12 @@ class MultiLeadECG:
         plt.close(fig)
 
     def export_to_csv(self, path: str) -> None:
-        """Export all leads to a CSV file for analysis."""
+        """Export all leads to a CSV file for analysis.
+
+        The output file path is validated to ensure it resides within the
+        configured output directory (``OUTPUT_DIR`` or ``output``).
+        """
+        safe_path = validate_output_path(path)
         order = [
             "I",
             "II",
@@ -139,7 +146,7 @@ class MultiLeadECG:
             "V5",
             "V6",
         ]
-        with open(path, "w", newline="") as csvfile:
+        with open(safe_path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["time"] + order)
             for idx, t in enumerate(self.time):
@@ -161,8 +168,7 @@ def main():
     ml = MultiLeadECG(ecg)
     fig, _ = ml.plot_all_leads()
 
-    out_dir = Path(os.getenv("OUTPUT_DIR", "."))
-    out_path = out_dir / "multi_lead_demo.png"
+    out_path = validate_output_path("multi_lead_demo.png")
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"Multi-lead demo saved as '{out_path}'")
