@@ -14,6 +14,8 @@ from cuddly_fiesta.waveform_segments import (
     TWave,
     UWave,
     VentricularTachycardia,
+    VentricularFibrillation,
+    PulselessElectricalActivity,
 )
 
 
@@ -67,6 +69,8 @@ class TestArrhythmiaPatterns(unittest.TestCase):
         self._check_pattern(NormalSinusRhythm())
         self._check_pattern(AtrialFibrillation())
         self._check_pattern(VentricularTachycardia())
+        self._check_pattern(VentricularFibrillation())
+        self._check_pattern(PulselessElectricalActivity())
 
 
 class TestMultiLeadAndAnimation(unittest.TestCase):
