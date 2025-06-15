@@ -450,7 +450,7 @@ class SinusBradycardia(ArrhythmiaPattern):
 
         if not (30 <= heart_rate_bpm < 60):
             raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside bradycardia range (<60 bpm)"
+                f"Heart rate {heart_rate_bpm}bpm is outside the bradycardia range of 30-59 bpm."
             )
 
         self.heart_rate_bpm = heart_rate_bpm
