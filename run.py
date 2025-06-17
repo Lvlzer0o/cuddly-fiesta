@@ -8,20 +8,29 @@ into a single entry-point for ease of use.
 """
 
 import argparse
+
+# import logging  # Removed unused import
 import csv
+import re
 import sys
 import warnings
 from abc import ABC, abstractmethod
 
+# import os  # Removed unused import
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Type, Union, Optional
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
+
+# Import all arrhythmia patterns from the rhythms package
+from cuddly_fiesta.rhythms import *
 
 # Visualization
 import matplotlib
 import matplotlib.pyplot as plt
 
+# Scientific computing
 import numpy as np
 
+# import matplotlib.patches as patches  # Removed unused import
 from matplotlib.animation import FuncAnimation
 from scipy.stats import skewnorm
 
@@ -827,189 +836,6 @@ class UWave(WaveformSegment):
 # ============================= ARRHYTHMIA PATTERNS =============================
 
 
-class ArrhythmiaPattern(ABC):
-    """Abstract base class for arrhythmia patterns - modular and swappable."""
-
-    def __init__(self, name: str):
-        self.name = name
-        self.segments = []
-        self.lead_morphology: Dict[str, Dict[str, Any]] = {}
-
-    @abstractmethod
-    def define_pattern(self) -> List[Dict]:
-        """Define the pattern of segments and their timing."""
-        pass
-
-    def apply_to_ecg(self, ecg_core: ECGCore) -> None:
-        """Apply this arrhythmia pattern to an ECG core."""
-        pattern = self.define_pattern()
-
-        for segment_def in pattern:
-            segment = segment_def["segment"]
-            start_time = segment_def["start_time_sec"]
-            ecg_core.add_waveform_segment(segment, start_time)
-
-    def get_lead_morphology(self) -> Dict[str, Dict[str, Any]]:
-        """Return per-lead morphology overrides for multi-lead synthesis."""
-        return self.lead_morphology
-
-
-class NormalSinusRhythm(ArrhythmiaPattern):
-    """Normal sinus rhythm pattern - modular and swappable."""
-
-    def __init__(self, heart_rate_bpm: int = 70):
-        super().__init__("Normal Sinus Rhythm")
-
-        if not (50 <= heart_rate_bpm <= 120):
-            raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside reasonable range (50-120 bpm)"
-            )
-
-        self.heart_rate_bpm = heart_rate_bpm
-        self.rr_interval_sec = 60.0 / heart_rate_bpm
-
-    def define_pattern(self) -> list:
-        """Define normal sinus rhythm pattern."""
-        pattern = []
-
-        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs_complex = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
-
-        pr_interval_sec = 0.16
-        qrs_start = pr_interval_sec
-
-        pattern.append({"segment": p_wave, "start_time_sec": 0.0})
-
-        pattern.append({"segment": qrs_complex, "start_time_sec": qrs_start})
-
-        st_duration = 0.12
-        t_wave_start = (
-            qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
-        )
-
-        pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
-
-        return pattern
-
-
-class AtrialFibrillation(ArrhythmiaPattern):
-    """Simple atrial fibrillation pattern with irregular RR intervals."""
-
-    def __init__(self, heart_rate_bpm: int = 90, duration_sec: float = 3.0):
-        super().__init__("Atrial Fibrillation")
-
-        if not (60 <= heart_rate_bpm <= 150):
-            raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside range (60-150 bpm)"
-            )
-
-        self.heart_rate_bpm = heart_rate_bpm
-        self.duration_sec = duration_sec
-        self._validator = ClinicalValidator()
-        self.base_rr = 60.0 / heart_rate_bpm
-
-    def define_pattern(self) -> list:
-        pattern = []
-        rng = np.random.default_rng(0)
-        t = 0.0
-
-        while t < self.duration_sec:
-            qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-            qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
-            pattern.append({"segment": qrs, "start_time_sec": qrs_start})
-
-            tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
-            t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
-            tw_start = (
-                self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
-            )
-            pattern.append({"segment": t_wave, "start_time_sec": tw_start})
-
-            uw_start = tw_start + t_wave.duration_ms / 1000.0 + 0.04
-            u_wave = UWave(amplitude_mv=0.1, duration_ms=80)
-            uw_start = (
-                self._validator.snap_to_grid_time(uw_start * 1000) / 1000.0
-            )
-            pattern.append({"segment": u_wave, "start_time_sec": uw_start})
-
-            rr = self.base_rr + rng.uniform(
-                -0.3 * self.base_rr, 0.3 * self.base_rr
-            )
-            t += rr
-
-        return pattern
-
-
-class VentricularTachycardia(ArrhythmiaPattern):
-    """Rapid ventricular tachycardia pattern."""
-
-    def __init__(self, heart_rate_bpm: int = 160, duration_sec: float = 3.0):
-        super().__init__("Ventricular Tachycardia")
-
-        if not (120 <= heart_rate_bpm <= 250):
-            raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside range (120-250 bpm)"
-            )
-
-        self.heart_rate_bpm = heart_rate_bpm
-        self.duration_sec = duration_sec
-        self._validator = ClinicalValidator()
-        self.rr_interval = 60.0 / heart_rate_bpm
-
-    def define_pattern(self) -> list:
-        pattern = []
-        t = 0.0
-
-        while t < self.duration_sec:
-            qrs = QRSComplex(
-                r_amplitude_mv=1.2, duration_ms=160, q_ratio=0.1, s_ratio=0.1
-            )
-            qrs_start = self._validator.snap_to_grid_time(t * 1000) / 1000.0
-            pattern.append({"segment": qrs, "start_time_sec": qrs_start})
-
-            tw_start = qrs_start + qrs.duration_ms / 1000.0 + 0.08
-            t_wave = TWave(amplitude_mv=-0.2, duration_ms=160)
-            tw_start = (
-                self._validator.snap_to_grid_time(tw_start * 1000) / 1000.0
-            )
-            pattern.append({"segment": t_wave, "start_time_sec": tw_start})
-
-            t += self.rr_interval
-
-        return pattern
-
-
-class WolffParkinsonWhite(ArrhythmiaPattern):
-    """Simplified WPW pattern with short PR and per-lead delta emphasis."""
-
-    def __init__(self, delta_leads: Optional[List[str]] = None):
-        super().__init__("Wolff-Parkinson-White")
-        self.delta_leads = delta_leads or ["V2", "V3"]
-        for ld in self.delta_leads:
-            self.lead_morphology[ld] = {
-                "QRS": {"r_scale": 1.2, "q_ratio": -0.05}
-            }
-        self._validator = ClinicalValidator()
-
-    def define_pattern(self) -> list:
-        pattern = []
-
-        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
-        qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
-        t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
-
-        pr_interval_sec = 0.1
-        qrs_start = pr_interval_sec
-
-        pattern.append({"segment": p_wave, "start_time_sec": 0.0})
-        pattern.append({"segment": qrs, "start_time_sec": qrs_start})
-        t_wave_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
-        pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
-
-        return pattern
-
-
 class Pericarditis(ArrhythmiaPattern):
     """Diffuse T-wave elevation mimicking pericarditis."""
 
@@ -1425,6 +1251,21 @@ def animate_ecg(
 
 # ============================= GUI APPLICATION =============================
 
+def get_arrhythmia_patterns() -> Dict[str, Type[ArrhythmiaPattern]]:
+    """Dynamically find all available arrhythmia patterns."""
+    patterns = {}
+    # Search for all subclasses of ArrhythmiaPattern in the current context
+    for name, obj in globals().items():
+        if (
+            isinstance(obj, type)
+            and issubclass(obj, ArrhythmiaPattern)
+            and obj is not ArrhythmiaPattern
+        ):
+            # Convert CamelCase class name to a space-separated string
+            pattern_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', obj.__name__)
+            patterns[pattern_name] = obj
+    return patterns
+
 if HAS_TKINTER:
 
     class ECGGui:
@@ -1439,11 +1280,7 @@ if HAS_TKINTER:
             self.pattern_name = tk.StringVar(value="Normal Sinus Rhythm")
             self.highlight_lead = tk.StringVar(value="None")
 
-            self.pattern_classes: Dict[str, Type[ArrhythmiaPattern]] = {
-                "Normal Sinus Rhythm": NormalSinusRhythm,
-                "Atrial Fibrillation": AtrialFibrillation,
-                "Ventricular Tachycardia": VentricularTachycardia,
-            }
+            self.pattern_classes: Dict[str, Type[ArrhythmiaPattern]] = get_arrhythmia_patterns()
 
             self._create_controls()
             self._create_figure()
