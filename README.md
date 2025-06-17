@@ -218,7 +218,7 @@ morphology = {
     "V5": {"QRS": {"r_scale": 1.2, "s_ratio": 0.2}},
 }
 
-multi = MultiLeadECG(ecg, morphology=morphology)
+multi = MultiLeadECG.from_ecg(ecg, morphology=morphology)
 fig, axes = multi.plot_all_leads()
 ```
 The `ecg-multilead-demo` command produces this example plot.

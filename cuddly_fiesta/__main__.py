@@ -35,7 +35,7 @@ def _cmd_animate(args: argparse.Namespace) -> None:
     """
     ecg = ECGCore(duration_sec=2, sampling_rate=1000)
     NormalSinusRhythm(heart_rate_bpm=70).apply_to_ecg(ecg)
-    source = MultiLeadECG(ecg) if args.multi else ecg
+    source = MultiLeadECG.from_ecg(ecg) if args.multi else ecg
     animate_ecg(source, interval_ms=args.interval, show_grid=args.grid)
     plt.show()
 
