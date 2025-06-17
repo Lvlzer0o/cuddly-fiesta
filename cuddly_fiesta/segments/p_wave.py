@@ -2,7 +2,16 @@
 
 import numpy as np
 from scipy.stats import norm
-from .base import WaveformSegment
+# In this trimmed test version the WaveformSegment base class is defined in the
+# top-level ``run.py`` module, so we load it dynamically.
+import importlib
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(__file__))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+WaveformSegment = importlib.import_module("run").WaveformSegment
 
 
 class PWave(WaveformSegment):
