@@ -353,7 +353,7 @@ class AdvancedNormalSinusRhythm(ArrhythmiaPattern):
         pattern.append({'segment': p_wave, 'start_time_sec': 0.0})
         pattern.append({'segment': qrs_complex, 'start_time_sec': qrs_start})
 
-        st_duration = 0.12
+        st_duration = NORMAL_BEAT_ST_DURATION_SEC
         t_wave_start = qrs_start + qrs_complex.duration_ms / 1000.0 + st_duration
         pattern.append({'segment': t_wave, 'start_time_sec': t_wave_start})
 
