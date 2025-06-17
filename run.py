@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple, Type, Union, Optional
 
 # Visualization
 import matplotlib
@@ -971,6 +971,7 @@ class MultiLeadECG:
         ecg: ECGCore,
         axis_theta_deg: float = 60.0,
         axis_phi_deg: float = 0.0,
+        morphology: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> None:
         """Create the multi‑lead representation.
 
@@ -988,6 +989,7 @@ class MultiLeadECG:
         self.time = ecg.time
         self.axis_theta_deg = axis_theta_deg
         self.axis_phi_deg = axis_phi_deg
+        self.morphology = morphology or {}
         self._baseline_grid_helper = None
         self._generate_leads()
 
@@ -1004,7 +1006,7 @@ class MultiLeadECG:
         return vec / norm if norm != 0 else vec
 
     def _generate_leads(self) -> None:
-        """Create lead signals using vector projections."""
+        """Create lead signals using vector projections and morphology."""
 
         base = self.ecg.voltage
         heart_vec = self._vector_from_angles(
@@ -1030,10 +1032,70 @@ class MultiLeadECG:
             "V6": lead_vector(0),
         }
 
+        # Start with scaled base signal for each lead
         leads: Dict[str, np.ndarray] = {}
+        lead_scales: Dict[str, float] = {}
         for name, vec in vectors.items():
             scale = float(np.dot(heart_vec, vec))
+            lead_scales[name] = scale
             leads[name] = base * scale
+
+        # Apply per-lead morphology adjustments
+        for info in self.ecg.segments_added:
+            segment = info["segment"]
+            start_idx = int(info["start_time"] * self.ecg.sampling_rate)
+            seg_time, seg_base = segment.generate(self.ecg.sampling_rate)
+            seg_len = len(seg_base)
+
+            for name, vec in vectors.items():
+                morph = self.morphology.get(name, {})
+                scale = lead_scales[name]
+                diff = None
+
+                if isinstance(segment, PWave):
+                    p_scale = morph.get("P", 1.0)
+                    if p_scale != 1.0:
+                        new_seg = PWave(
+                            amplitude_mv=segment.amplitude_mv * p_scale,
+                            duration_ms=segment.duration_ms,
+                        )
+                        _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                        diff = (seg_new - seg_base) * scale
+
+                elif isinstance(segment, QRSComplex):
+                    qrs_cfg = morph.get("QRS", {})
+                    if qrs_cfg:
+                        r_scale = qrs_cfg.get("r_scale", 1.0)
+                        q_ratio = qrs_cfg.get("q_ratio", segment.q_ratio)
+                        s_ratio = qrs_cfg.get("s_ratio", segment.s_ratio)
+                        if (
+                            r_scale != 1.0
+                            or q_ratio != segment.q_ratio
+                            or s_ratio != segment.s_ratio
+                        ):
+                            new_seg = QRSComplex(
+                                r_amplitude_mv=segment.amplitude_mv * r_scale,
+                                duration_ms=segment.duration_ms,
+                                q_ratio=q_ratio,
+                                s_ratio=s_ratio,
+                            )
+                            _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                            diff = (seg_new - seg_base) * scale
+
+                elif isinstance(segment, TWave):
+                    t_scale = morph.get("T", 1.0)
+                    if t_scale != 1.0:
+                        new_seg = TWave(
+                            amplitude_mv=segment.amplitude_mv * t_scale,
+                            duration_ms=segment.duration_ms,
+                        )
+                        _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                        diff = (seg_new - seg_base) * scale
+
+                if diff is not None:
+                    end_idx = min(start_idx + seg_len, len(leads[name]))
+                    seg_slice = slice(start_idx, end_idx)
+                    leads[name][seg_slice] += diff[: end_idx - start_idx]
 
         self.leads = leads
 
