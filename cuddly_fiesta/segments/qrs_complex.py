@@ -1,8 +1,21 @@
 """QRS complex segment for ECG waveforms."""
 
 import numpy as np
-from scipy.signal import gaussian
-from .base import WaveformSegment
+
+
+def _gaussian(n: int, std: float) -> np.ndarray:
+    """Simplified Gaussian window used for QRS shaping."""
+    x = np.linspace(-std, std, n)
+    return np.exp(-0.5 * (x / std) ** 2)
+
+import importlib
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(__file__))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+WaveformSegment = importlib.import_module("run").WaveformSegment
 
 
 class QRSComplex(WaveformSegment):

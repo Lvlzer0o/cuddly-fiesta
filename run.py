@@ -957,38 +957,83 @@ class VentricularTachycardia(ArrhythmiaPattern):
 
 
 class MultiLeadECG:
-    """Generate a simple 12-lead ECG from an ECGCore instance."""
+    """Generate a simple 12-lead ECG from an ``ECGCore`` instance.
 
-    def __init__(self, ecg: ECGCore):
+    The previous implementation merely scaled the base ECG voltage to obtain
+    different leads.  This revision models each lead as the projection of the
+    heart's mean electrical axis onto the orientation vector of that lead.
+    This provides a very lightweight 3‑dimensional vector synthesis while
+    keeping the API unchanged.
+    """
+
+    def __init__(
+        self,
+        ecg: ECGCore,
+        axis_theta_deg: float = 60.0,
+        axis_phi_deg: float = 0.0,
+    ) -> None:
+        """Create the multi‑lead representation.
+
+        Parameters
+        ----------
+        ecg:
+            Source ``ECGCore`` object.
+        axis_theta_deg:
+            Frontal plane angle of the mean electrical axis in degrees.
+        axis_phi_deg:
+            Elevation angle (toward head/feet) of the axis in degrees.
+        """
+
         self.ecg = ecg
         self.time = ecg.time
-        self._baseline_grid_helper = None  # Initialize the helper attribute
+        self.axis_theta_deg = axis_theta_deg
+        self.axis_phi_deg = axis_phi_deg
+        self._baseline_grid_helper = None
         self._generate_leads()
 
+    @staticmethod
+    def _vector_from_angles(theta_deg: float, phi_deg: float) -> np.ndarray:
+        """Convert spherical angles to a unit Cartesian vector."""
+        theta = np.radians(theta_deg)
+        phi = np.radians(phi_deg)
+        x = np.cos(phi) * np.cos(theta)
+        y = np.sin(phi)
+        z = np.cos(phi) * np.sin(theta)
+        vec = np.array([x, y, z], dtype=float)
+        norm = np.linalg.norm(vec)
+        return vec / norm if norm != 0 else vec
+
     def _generate_leads(self) -> None:
-        """Create all limb and precordial leads."""
+        """Create lead signals using vector projections."""
+
         base = self.ecg.voltage
+        heart_vec = self._vector_from_angles(
+            self.axis_theta_deg, self.axis_phi_deg
+        )
 
-        # Approximate limb potentials
-        ra = -0.5 * base
-        la = 0.5 * base
-        ll = 1.0 * base
+        def lead_vector(theta: float, phi: float = 0.0) -> np.ndarray:
+            return self._vector_from_angles(theta, phi)
 
-        leads: Dict[str, np.ndarray] = {
-            "I": la - ra,
-            "II": ll - ra,
-            "III": ll - la,
-            "aVR": ra - (la + ll) / 2,
-            "aVL": la - (ra + ll) / 2,
-            "aVF": ll - (ra + la) / 2,
+        vectors: Dict[str, np.ndarray] = {
+            "I": lead_vector(0),
+            "II": lead_vector(60),
+            "III": lead_vector(120),
+            "aVR": lead_vector(-150),
+            "aVL": lead_vector(-30),
+            "aVF": lead_vector(90),
+            # Precordial leads approximated on the horizontal plane
+            "V1": lead_vector(110),
+            "V2": lead_vector(100),
+            "V3": lead_vector(75),
+            "V4": lead_vector(60),
+            "V5": lead_vector(30),
+            "V6": lead_vector(0),
         }
 
-        # Wilson central terminal
-        wct = (ra + la + ll) / 3
-
-        chest_factors = [-0.5, -0.1, 0.1, 0.5, 0.8, 1.0]
-        for i, factor in enumerate(chest_factors, start=1):
-            leads[f"V{i}"] = factor * base - wct
+        leads: Dict[str, np.ndarray] = {}
+        for name, vec in vectors.items():
+            scale = float(np.dot(heart_vec, vec))
+            leads[name] = base * scale
 
         self.leads = leads
 
