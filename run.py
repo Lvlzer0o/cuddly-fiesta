@@ -1110,16 +1110,41 @@ class MultiLeadECG:
     def plot_all_leads(
         self, figure_size: Tuple[int, int] = (12, 8), with_grid: bool = False
     ):
-        """Plot all 12 leads in a 4x3 grid."""
-        fig, axes = plt.subplots(
-            4, 3, figsize=figure_size, sharex=True, sharey=True
-        )
+        """Plot all 12 leads using the canonical layout."""
+
+        fig = plt.figure(figsize=figure_size)
+        gs = fig.add_gridspec(3, 6)
         order = [
-            "I", "II", "III",
-            "aVR", "aVL", "aVF",
-            "V1", "V2", "V3",
-            "V4", "V5", "V6"
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVL",
+            "aVF",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
         ]
+
+        positions = [
+            gs[0, 0:2],
+            gs[0, 2:4],
+            gs[0, 4:6],
+            gs[1, 0:2],
+            gs[1, 2:4],
+            gs[1, 4:6],
+            gs[2, 0],
+            gs[2, 1],
+            gs[2, 2],
+            gs[2, 3],
+            gs[2, 4],
+            gs[2, 5],
+        ]
+
+        axes = [fig.add_subplot(pos) for pos in positions]
 
         # Initialize the grid helper if needed
         if with_grid and self._baseline_grid_helper is None:
@@ -1128,7 +1153,7 @@ class MultiLeadECG:
                 sampling_rate=self.sampling_rate
             )
 
-        for ax, name in zip(axes.ravel(), order):
+        for ax, name in zip(axes, order):
             ax.plot(self.time, self.leads[name], "k", linewidth=1)
             ax.set_title(name)
             ax.set_xlim(0, self.duration_sec)
@@ -1218,7 +1243,7 @@ def _animate_single_lead(ecg: ECGCore, interval_ms: int) -> FuncAnimation:
 def _animate_multi_lead(
     multi: MultiLeadECG, interval_ms: int
 ) -> FuncAnimation:
-    """Animate all 12 leads in a 4x3 grid."""
+    """Animate all 12 leads using the canonical layout."""
     order = [
         "I",
         "II",
@@ -1233,9 +1258,25 @@ def _animate_multi_lead(
         "V5",
         "V6",
     ]
-    fig, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, sharey=True)
+    fig = plt.figure(figsize=(12, 8))
+    gs = fig.add_gridspec(3, 6)
+    positions = [
+        gs[0, 0:2],
+        gs[0, 2:4],
+        gs[0, 4:6],
+        gs[1, 0:2],
+        gs[1, 2:4],
+        gs[1, 4:6],
+        gs[2, 0],
+        gs[2, 1],
+        gs[2, 2],
+        gs[2, 3],
+        gs[2, 4],
+        gs[2, 5],
+    ]
+    axes = [fig.add_subplot(pos) for pos in positions]
     lines = []
-    for ax, name in zip(axes.ravel(), order):
+    for ax, name in zip(axes, order):
         ax.set_xlim(0, multi.duration_sec)
         ax.set_ylim(-2, 2)
         ax.set_title(name)
@@ -1365,9 +1406,23 @@ if HAS_TKINTER:
             highlight_menu.pack(side=tk.LEFT, padx=5)
 
         def _create_figure(self) -> None:
-            self.fig, self.axes = plt.subplots(
-                4, 3, figsize=(12, 8), sharex=True, sharey=True
-            )
+            self.fig = plt.figure(figsize=(12, 8))
+            gs = self.fig.add_gridspec(3, 6)
+            positions = [
+                gs[0, 0:2],
+                gs[0, 2:4],
+                gs[0, 4:6],
+                gs[1, 0:2],
+                gs[1, 2:4],
+                gs[1, 4:6],
+                gs[2, 0],
+                gs[2, 1],
+                gs[2, 2],
+                gs[2, 3],
+                gs[2, 4],
+                gs[2, 5],
+            ]
+            self.axes = [self.fig.add_subplot(pos) for pos in positions]
             plt.tight_layout()
             if FigureCanvasTkAgg is None:
                 raise RuntimeError("Tkinter backend is not available")
@@ -1384,7 +1439,7 @@ if HAS_TKINTER:
             self.time = self.multi.time
             self.leads = [self.multi.leads[name] for name in self.order[1:]]
 
-            for ax, name in zip(self.axes.ravel(), self.order[1:]):
+            for ax, name in zip(self.axes, self.order[1:]):
                 ax.cla()
                 ax.set_xlim(0, ecg.duration_sec)
                 ax.set_ylim(-2, 2)
@@ -1393,10 +1448,7 @@ if HAS_TKINTER:
                 ax.set_xticks([])
                 ax.set_yticks([])
 
-            self.lines = [
-                ax.plot([], [], "k", linewidth=1)[0]
-                for ax in self.axes.ravel()
-            ]
+            self.lines = [ax.plot([], [], "k", linewidth=1)[0] for ax in self.axes]
             self.frame_idx = 0
             self._apply_highlight()
             self.canvas.draw()
