@@ -957,42 +957,29 @@ class VentricularTachycardia(ArrhythmiaPattern):
 
 
 class MultiLeadECG:
-    """Generate a simple 12-lead ECG from an ``ECGCore`` instance.
+    """Container for 12 ECG lead signals."""
 
-    The previous implementation merely scaled the base ECG voltage to obtain
-    different leads.  This revision models each lead as the projection of the
-    heart's mean electrical axis onto the orientation vector of that lead.
-    This provides a very lightweight 3‑dimensional vector synthesis while
-    keeping the API unchanged.
-    """
-
-    def __init__(
-        self,
-        ecg: ECGCore,
-        axis_theta_deg: float = 60.0,
-        axis_phi_deg: float = 0.0,
-        morphology: Optional[Dict[str, Dict[str, Any]]] = None,
-    ) -> None:
-        """Create the multi‑lead representation.
+    def __init__(self, leads: Dict[str, np.ndarray], sampling_rate: int) -> None:
+        """Initialize with pre-computed lead signals.
 
         Parameters
         ----------
-        ecg:
-            Source ``ECGCore`` object.
-        axis_theta_deg:
-            Frontal plane angle of the mean electrical axis in degrees.
-        axis_phi_deg:
-            Elevation angle (toward head/feet) of the axis in degrees.
+        leads:
+            Mapping of lead name to voltage time series.
+        sampling_rate:
+            Samples per second for all signals.
         """
 
-        self.ecg = ecg
-        self.time = ecg.time
-        self.axis_theta_deg = axis_theta_deg
-        self.axis_phi_deg = axis_phi_deg
-        self.morphology = morphology or {}
+        self.leads = leads
+        self.sampling_rate = sampling_rate
+        self.n_samples = len(next(iter(leads.values())))
+        self.time = np.arange(self.n_samples) / sampling_rate
+        self.duration_sec = self.n_samples / sampling_rate
         self._baseline_grid_helper = None
-        self._generate_leads()
 
+    # ------------------------------------------------------------------
+    # Legacy construction helpers
+    # ------------------------------------------------------------------
     @staticmethod
     def _vector_from_angles(theta_deg: float, phi_deg: float) -> np.ndarray:
         """Convert spherical angles to a unit Cartesian vector."""
@@ -1005,16 +992,21 @@ class MultiLeadECG:
         norm = np.linalg.norm(vec)
         return vec / norm if norm != 0 else vec
 
-    def _generate_leads(self) -> None:
-        """Create lead signals using vector projections and morphology."""
+    @classmethod
+    def from_ecg(
+        cls,
+        ecg: ECGCore,
+        axis_theta_deg: float = 60.0,
+        axis_phi_deg: float = 0.0,
+        morphology: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> "MultiLeadECG":
+        """Create ``MultiLeadECG`` from an ``ECGCore`` instance."""
 
-        base = self.ecg.voltage
-        heart_vec = self._vector_from_angles(
-            self.axis_theta_deg, self.axis_phi_deg
-        )
+        base = ecg.voltage
+        heart_vec = cls._vector_from_angles(axis_theta_deg, axis_phi_deg)
 
         def lead_vector(theta: float, phi: float = 0.0) -> np.ndarray:
-            return self._vector_from_angles(theta, phi)
+            return cls._vector_from_angles(theta, phi)
 
         vectors: Dict[str, np.ndarray] = {
             "I": lead_vector(0),
@@ -1032,7 +1024,6 @@ class MultiLeadECG:
             "V6": lead_vector(0),
         }
 
-        # Start with scaled base signal for each lead
         leads: Dict[str, np.ndarray] = {}
         lead_scales: Dict[str, float] = {}
         for name, vec in vectors.items():
@@ -1040,15 +1031,15 @@ class MultiLeadECG:
             lead_scales[name] = scale
             leads[name] = base * scale
 
-        # Apply per-lead morphology adjustments
-        for info in self.ecg.segments_added:
+        morphology = morphology or {}
+        for info in ecg.segments_added:
             segment = info["segment"]
-            start_idx = int(info["start_time"] * self.ecg.sampling_rate)
-            seg_time, seg_base = segment.generate(self.ecg.sampling_rate)
+            start_idx = int(info["start_time"] * ecg.sampling_rate)
+            seg_time, seg_base = segment.generate(ecg.sampling_rate)
             seg_len = len(seg_base)
 
-            for name, vec in vectors.items():
-                morph = self.morphology.get(name, {})
+            for name in vectors.keys():
+                morph = morphology.get(name, {})
                 scale = lead_scales[name]
                 diff = None
 
@@ -1059,7 +1050,7 @@ class MultiLeadECG:
                             amplitude_mv=segment.amplitude_mv * p_scale,
                             duration_ms=segment.duration_ms,
                         )
-                        _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                        _, seg_new = new_seg.generate(ecg.sampling_rate)
                         diff = (seg_new - seg_base) * scale
 
                 elif isinstance(segment, QRSComplex):
@@ -1079,7 +1070,7 @@ class MultiLeadECG:
                                 q_ratio=q_ratio,
                                 s_ratio=s_ratio,
                             )
-                            _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                            _, seg_new = new_seg.generate(ecg.sampling_rate)
                             diff = (seg_new - seg_base) * scale
 
                 elif isinstance(segment, TWave):
@@ -1089,7 +1080,7 @@ class MultiLeadECG:
                             amplitude_mv=segment.amplitude_mv * t_scale,
                             duration_ms=segment.duration_ms,
                         )
-                        _, seg_new = new_seg.generate(self.ecg.sampling_rate)
+                        _, seg_new = new_seg.generate(ecg.sampling_rate)
                         diff = (seg_new - seg_base) * scale
 
                 if diff is not None:
@@ -1097,7 +1088,20 @@ class MultiLeadECG:
                     seg_slice = slice(start_idx, end_idx)
                     leads[name][seg_slice] += diff[: end_idx - start_idx]
 
-        self.leads = leads
+        return cls(leads, ecg.sampling_rate)
+
+    @staticmethod
+    def _vector_from_angles(theta_deg: float, phi_deg: float) -> np.ndarray:
+        """Convert spherical angles to a unit Cartesian vector."""
+        theta = np.radians(theta_deg)
+        phi = np.radians(phi_deg)
+        x = np.cos(phi) * np.cos(theta)
+        y = np.sin(phi)
+        z = np.cos(phi) * np.sin(theta)
+        vec = np.array([x, y, z], dtype=float)
+        norm = np.linalg.norm(vec)
+        return vec / norm if norm != 0 else vec
+
 
     def get_lead(self, name: str):
         """Return the voltage array for the specified lead."""
@@ -1120,14 +1124,14 @@ class MultiLeadECG:
         # Initialize the grid helper if needed
         if with_grid and self._baseline_grid_helper is None:
             self._baseline_grid_helper = ECGBaseline(
-                duration_sec=self.ecg.duration_sec,
-                sampling_rate=self.ecg.sampling_rate
+                duration_sec=self.duration_sec,
+                sampling_rate=self.sampling_rate
             )
 
         for ax, name in zip(axes.ravel(), order):
             ax.plot(self.time, self.leads[name], "k", linewidth=1)
             ax.set_title(name)
-            ax.set_xlim(0, self.ecg.duration_sec)
+            ax.set_xlim(0, self.duration_sec)
             ax.set_ylim(-2, 2)
             ax.set_xticks([])
             ax.set_yticks([])
@@ -1232,7 +1236,7 @@ def _animate_multi_lead(
     fig, axes = plt.subplots(4, 3, figsize=(12, 8), sharex=True, sharey=True)
     lines = []
     for ax, name in zip(axes.ravel(), order):
-        ax.set_xlim(0, multi.ecg.duration_sec)
+        ax.set_xlim(0, multi.duration_sec)
         ax.set_ylim(-2, 2)
         ax.set_title(name)
         ax.axhline(0, color="gray", linewidth=0.5)
@@ -1375,7 +1379,7 @@ if HAS_TKINTER:
             pattern = pattern_cls()
             ecg = ECGCore(duration_sec=self.ecg_length_sec, sampling_rate=1000)
             pattern.apply_to_ecg(ecg)
-            self.multi = MultiLeadECG(ecg)
+            self.multi = MultiLeadECG.from_ecg(ecg)
 
             self.time = self.multi.time
             self.leads = [self.multi.leads[name] for name in self.order[1:]]
@@ -1534,7 +1538,7 @@ def demo_12_lead():
     pattern = NormalSinusRhythm(heart_rate_bpm=70)
     pattern.apply_to_ecg(ecg)
 
-    multi = MultiLeadECG(ecg)
+    multi = MultiLeadECG.from_ecg(ecg)
 
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
@@ -1566,7 +1570,7 @@ def run_animation(multi_lead=False, interval_ms=40):
                 ecg.add_waveform_segment(segment, start_time)
 
     if multi_lead:
-        source = MultiLeadECG(ecg)
+        source = MultiLeadECG.from_ecg(ecg)
     else:
         source = ecg
 
