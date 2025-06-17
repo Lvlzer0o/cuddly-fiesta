@@ -154,6 +154,19 @@ class NormalSinusRhythm(ArrhythmiaPattern):
   Ventricular Tachycardia, Premature Ventricular Contraction,
   Second Degree AV Block, and Atrial Flutter
 
+### 5. **CardiacDipoleModel** (Ground Truth)
+```python
+from cardiac_vector import CardiacDipoleModel
+
+model = CardiacDipoleModel(duration_sec=1.0, sampling_rate=1000)
+dipole = model.generate_dipole()
+potentials = model.surface_potentials([(5, 0, 0), (-5, 0, 0)])
+```
+
+This model yields a time-varying 3D dipole that can be used to compute
+surface potentials for arbitrary electrode locations, providing a
+physically motivated ground truth for electrical activity.
+
 ## 🔧 Usage Examples
 
 ### Basic ECG with Manual Segments
