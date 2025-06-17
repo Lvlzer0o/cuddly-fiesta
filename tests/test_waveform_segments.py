@@ -77,7 +77,7 @@ class TestMultiLeadAndAnimation(unittest.TestCase):
     def test_multi_lead_shapes(self):
         ecg = ECGCore(duration_sec=1, sampling_rate=1000)
         NormalSinusRhythm().apply_to_ecg(ecg)
-        ml = MultiLeadECG(ecg)
+        ml = MultiLeadECG.from_ecg(ecg)
         self.assertEqual(len(ml.leads), 12)
         for lead in ml.leads.values():
             self.assertEqual(len(lead), len(ecg.time))
@@ -87,7 +87,7 @@ class TestMultiLeadAndAnimation(unittest.TestCase):
         NormalSinusRhythm().apply_to_ecg(ecg)
         ani1 = animate_ecg(ecg, show_grid=True)
         self.assertIsNotNone(ani1)
-        ml = MultiLeadECG(ecg)
+        ml = MultiLeadECG.from_ecg(ecg)
         ani2 = animate_ecg(ml, show_grid=True)
         self.assertIsNotNone(ani2)
 
