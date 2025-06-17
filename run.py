@@ -363,6 +363,19 @@ class ClinicalValidator:
             "QRS_complex": {"min": 0.5, "max": 1.5, "target": 1.0},
         }
 
+        # Lead-specific amplitude constraints (example R-wave progression)
+        self.lead_amplitude_constraints = {
+            "V1": {"R_wave": {"min": 0.1, "max": 0.6}},
+            "V2": {"R_wave": {"min": 0.2, "max": 0.8}},
+            "V3": {"R_wave": {"min": 0.3, "max": 1.2}},
+            "V4": {"R_wave": {"min": 0.5, "max": 1.6}},
+            "V5": {"R_wave": {"min": 0.7, "max": 1.8}},
+            "V6": {"R_wave": {"min": 0.6, "max": 1.6}},
+        }
+
+        # Placeholder for potential lead-specific timing rules
+        self.lead_timing_constraints = {}
+
     def snap_to_grid_time(self, time_ms):
         """Snap timing to nearest grid unit (40ms increments)."""
         return (
@@ -377,15 +390,19 @@ class ClinicalValidator:
             * self.small_square_voltage_mv
         )
 
-    def validate_timing(self, segment_name, duration_ms):
+    def validate_timing(self, segment_name, duration_ms, lead=None):
         """Validate segment timing against clinical constraints."""
-        if segment_name not in self.timing_constraints:
+        constraints = None
+        if lead:
+            lead_constraints = self.lead_timing_constraints.get(lead, {})
+            constraints = lead_constraints.get(segment_name)
+        if constraints is None:
+            constraints = self.timing_constraints.get(segment_name)
+        if constraints is None:
             return (
                 True,
                 f"⚠️ No timing constraints defined for segment: {segment_name}",
             )
-
-        constraints = self.timing_constraints[segment_name]
         snapped_duration = self.snap_to_grid_time(duration_ms)
 
         if constraints["min"] <= snapped_duration <= constraints["max"]:
@@ -399,15 +416,20 @@ class ClinicalValidator:
                 f"❌ {segment_name} timing: {snapped_duration}ms (outside {constraints['min']}-{constraints['max']}ms range)",
             )
 
-    def validate_amplitude(self, segment_name, amplitude_mv):
+    def validate_amplitude(self, segment_name, amplitude_mv, lead=None):
         """Validate segment amplitude against clinical constraints."""
-        if segment_name not in self.amplitude_constraints:
+        constraints = None
+        if lead:
+            lead_constraints = self.lead_amplitude_constraints.get(lead, {})
+            constraints = lead_constraints.get(segment_name)
+        if constraints is None:
+            constraints = self.amplitude_constraints.get(segment_name)
+        if constraints is None:
             return (
                 True,
                 f"⚠️ No amplitude constraints defined for segment: {segment_name}",
             )
 
-        constraints = self.amplitude_constraints[segment_name]
         snapped_amplitude = self.snap_to_grid_voltage(amplitude_mv)
 
         if constraints["min"] <= snapped_amplitude <= constraints["max"]:
@@ -811,6 +833,7 @@ class ArrhythmiaPattern(ABC):
     def __init__(self, name: str):
         self.name = name
         self.segments = []
+        self.lead_morphology: Dict[str, Dict[str, Any]] = {}
 
     @abstractmethod
     def define_pattern(self) -> List[Dict]:
@@ -825,6 +848,10 @@ class ArrhythmiaPattern(ABC):
             segment = segment_def["segment"]
             start_time = segment_def["start_time_sec"]
             ecg_core.add_waveform_segment(segment, start_time)
+
+    def get_lead_morphology(self) -> Dict[str, Dict[str, Any]]:
+        """Return per-lead morphology overrides for multi-lead synthesis."""
+        return self.lead_morphology
 
 
 class NormalSinusRhythm(ArrhythmiaPattern):
@@ -951,6 +978,50 @@ class VentricularTachycardia(ArrhythmiaPattern):
             t += self.rr_interval
 
         return pattern
+
+
+class WolffParkinsonWhite(ArrhythmiaPattern):
+    """Simplified WPW pattern with short PR and per-lead delta emphasis."""
+
+    def __init__(self, delta_leads: Optional[List[str]] = None):
+        super().__init__("Wolff-Parkinson-White")
+        self.delta_leads = delta_leads or ["V2", "V3"]
+        for ld in self.delta_leads:
+            self.lead_morphology[ld] = {
+                "QRS": {"r_scale": 1.2, "q_ratio": -0.05}
+            }
+        self._validator = ClinicalValidator()
+
+    def define_pattern(self) -> list:
+        pattern = []
+
+        p_wave = PWave(amplitude_mv=0.15, duration_ms=100)
+        qrs = QRSComplex(r_amplitude_mv=1.0, duration_ms=100)
+        t_wave = TWave(amplitude_mv=0.25, duration_ms=160)
+
+        pr_interval_sec = 0.1
+        qrs_start = pr_interval_sec
+
+        pattern.append({"segment": p_wave, "start_time_sec": 0.0})
+        pattern.append({"segment": qrs, "start_time_sec": qrs_start})
+        t_wave_start = qrs_start + qrs.duration_ms / 1000.0 + 0.12
+        pattern.append({"segment": t_wave, "start_time_sec": t_wave_start})
+
+        return pattern
+
+
+class Pericarditis(ArrhythmiaPattern):
+    """Diffuse T-wave elevation mimicking pericarditis."""
+
+    def __init__(self):
+        super().__init__("Pericarditis")
+        high = ["I", "II", "aVL", "V3", "V4", "V5", "V6"]
+        for ld in high:
+            self.lead_morphology[ld] = {"T": 1.5}
+        self.lead_morphology["aVR"] = {"T": 0.5}
+
+    def define_pattern(self) -> list:
+        return NormalSinusRhythm(heart_rate_bpm=80).define_pattern()
 
 
 # ============================= MULTI-LEAD ECG =============================

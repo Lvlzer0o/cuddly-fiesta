@@ -15,6 +15,8 @@ ArrhythmiaPattern = run.ArrhythmiaPattern
 NormalSinusRhythm = run.NormalSinusRhythm
 AtrialFibrillation = run.AtrialFibrillation
 VentricularTachycardia = run.VentricularTachycardia
+WolffParkinsonWhite = run.WolffParkinsonWhite
+Pericarditis = run.Pericarditis
 PWave = run.PWave
 QRSComplex = run.QRSComplex
 TWave = run.TWave
@@ -48,6 +50,8 @@ __all__ = [
     "VentricularTachycardia",
     "VentricularFibrillation",
     "PulselessElectricalActivity",
+    "WolffParkinsonWhite",
+    "Pericarditis",
     "PWave",
     "QRSComplex",
     "TWave",
