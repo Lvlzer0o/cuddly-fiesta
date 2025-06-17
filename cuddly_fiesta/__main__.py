@@ -8,24 +8,29 @@ Use `python -m cuddly_fiesta --help` for usage details.
 """
 
 import argparse
+import importlib
 from typing import List, Optional
 
 import matplotlib.pyplot as plt
 
-from . import agents, ecg_baseline, ekg_ui
+from . import agents
 from .ecg_animation import animate_ecg
 from .ecg_core import ECGCore
 from .multi_lead import MultiLeadECG
-from .waveform_segments import NormalSinusRhythm, demo_afib, demo_normal
+from .waveform_segments import NormalSinusRhythm
+
+# The original functionality was consolidated into the `run.py` script.
+# We now import functions from there dynamically.
+run = importlib.import_module("run")
 
 
 def _cmd_baseline(_args: argparse.Namespace) -> None:
     """Handles the 'baseline' subcommand.
 
-    Generates and displays a baseline ECG plot by calling `ecg_baseline.main()`.
+    Generates and displays a baseline ECG plot by calling `run.demo_baseline()`.
     The `_args` parameter is currently unused by this specific command.
     """
-    ecg_baseline.main(show_plot=True)
+    run.demo_baseline()
 
 
 def _cmd_animate(args: argparse.Namespace) -> None:
@@ -45,17 +50,17 @@ def _cmd_gui(_args: argparse.Namespace) -> None:
 
     Launches the Tk-based GUI interface.
     """
-    ekg_ui.main()
+    run.run_gui()
 
 
 def _cmd_demo_normal(_args: argparse.Namespace) -> None:
     """Handles the 'demo normal' subcommand."""
-    demo_normal()
+    run.demo_single_beat()
 
 
 def _cmd_demo_afib(_args: argparse.Namespace) -> None:
     """Handles the 'demo afib' subcommand."""
-    demo_afib()
+    run.demo_arrhythmias()
 
 
 def _cmd_agent_run_all(_args: argparse.Namespace) -> None:

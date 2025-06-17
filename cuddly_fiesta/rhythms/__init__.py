@@ -24,6 +24,7 @@ from .supraventricular_tachycardia import SupraventricularTachycardia
 from .multifocal_atrial_tachycardia import MultifocalAtrialTachycardia
 from .ventricular_fibrillation import VentricularFibrillation
 from .torsades_de_pointes import TorsadesDePointes
+from .wolff_parkinson_white import WolffParkinsonWhite
 
 # TODO: Import other rhythm classes as they are implemented
 # from .atrial_flutter import AtrialFlutter
@@ -46,6 +47,7 @@ __all__ = [
     "MultifocalAtrialTachycardia",
     "VentricularFibrillation",
     "TorsadesDePointes",
+    "WolffParkinsonWhite",
     # "AtrialFlutter",
     # "VentricularTachycardia",
     # "PrematureVentricularContraction",
