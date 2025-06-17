@@ -156,7 +156,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
 
 ### 5. **CardiacDipoleModel** (Ground Truth)
 ```python
-from cardiac_vector import CardiacDipoleModel
+from cuddly_fiesta import CardiacDipoleModel
 
 model = CardiacDipoleModel(duration_sec=1.0, sampling_rate=1000)
 dipole = model.generate_dipole()
