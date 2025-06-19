@@ -36,7 +36,7 @@ class PWave(WaveformSegment):
 
         super().__init__(duration_ms, amplitude_mv)
     
-    def generate(self, sampling_rate: int):
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate P-wave using asymmetric double-Gaussian model.
         
         Args:
