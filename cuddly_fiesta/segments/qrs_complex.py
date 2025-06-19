@@ -70,7 +70,7 @@ class QRSComplex(WaveformSegment):
             window = np.ones(length)
         return amplitude * window
     
-    def generate(self, sampling_rate: int):
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate QRS complex using triple-component model.
         
         Args:
