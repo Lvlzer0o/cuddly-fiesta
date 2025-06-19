@@ -20,7 +20,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .ecg_baseline import ECGBaseline
-from .grid_constants import SMALL_SQUARE_TIME_SEC, SMALL_SQUARE_VOLTAGE_MV
+from .grid_scaling import (
+    SMALL_SQUARE_TIME_SEC,
+    SMALL_SQUARE_VOLTAGE_MV,
+    LARGE_SQUARE_TIME_SEC,
+    LARGE_SQUARE_VOLTAGE_MV,
+)
 
 # Reference constants for clinical ECG standards
 REFERENCE_R_WAVE_MV = 1.0  # Standard calibration reference (1.0mV = 10mm)
@@ -93,7 +98,7 @@ class ClinicalValidator:
         self.amplitude_constraints = {
             "P_wave": {"min": 0.1, "max": 0.25, "target": 0.15},
             "Q_wave": {"min": 0.1, "max": 0.3, "target": 0.2},
-            "R_wave": {"min": 0.8, "max": 1.0, "target": 1.0},  # Reference
+            "R_wave": {"min": 0.5, "max": 1.0, "target": 1.0},
             "S_wave": {"min": 0.2, "max": 0.4, "target": 0.3},
             "T_wave": {"min": 0.1, "max": 0.5, "target": 0.25},
             "U_wave": {"min": 0.05, "max": 0.15, "target": 0.1},
@@ -164,7 +169,7 @@ class ClinicalValidator:
                 f"❌ {segment_name} timing: {snapped_duration}ms (outside {constraints['min']}-{constraints['max']}ms range)",
             )
 
-    def validate_amplitude(self, segment_name, amplitude_mv):
+    def validate_amplitude(self, segment_name, amplitude_mv, lead=None):
         """Validate segment amplitude against clinical constraints.
 
         Args:

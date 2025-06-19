@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from .waveform_segment import WaveformSegment
+from .grid_scaling import GridScaling
 
 
 class ArrhythmiaPattern(ABC):
@@ -35,8 +36,8 @@ class ArrhythmiaPattern(ABC):
         self.lead_modifiers = lead_modifiers or {}
     
     def add_segment(
-        self, 
-        time_sec: float, 
+        self,
+        time_sec: float,
         segment: WaveformSegment,
         lead_name: Optional[str] = None
     ) -> None:
@@ -47,7 +48,15 @@ class ArrhythmiaPattern(ABC):
             segment: WaveformSegment instance to add
             lead_name: Optional lead name if segment is lead-specific
         """
-        self.segments.append((time_sec, segment, lead_name))
+        snapped = GridScaling.snap_to_grid_time(time_sec)
+        self.segments.append((snapped, segment, lead_name))
+
+    def apply_to_ecg(self, ecg, lead_name: Optional[str] = None) -> None:
+        """Apply this pattern's segments to an ``ECGCore`` instance."""
+        self.define_pattern()
+        for start, segment, lead in self.segments:
+            if 0 <= start < ecg.duration_sec:
+                ecg.add_waveform_segment(segment, start, lead_name or lead)
     
     @abstractmethod
     def define_pattern(self) -> None:
