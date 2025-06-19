@@ -10,6 +10,7 @@ from .arrhythmia_pattern import ArrhythmiaPattern
 from .ecg_core import ECGCore
 from .multi_lead import MultiLeadECG
 from .clinical_validator import ClinicalValidator
+from .ecg_baseline import ECGBaseline
 
 __all__ = [
     'GridScaling',
@@ -18,4 +19,5 @@ __all__ = [
     'ECGCore',
     'MultiLeadECG',
     'ClinicalValidator',
+    'ECGBaseline',
 ]

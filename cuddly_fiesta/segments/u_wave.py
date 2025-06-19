@@ -3,14 +3,7 @@
 import numpy as np
 from scipy.stats import norm
 
-import importlib
-import os
-import sys
-
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-WaveformSegment = importlib.import_module("run").WaveformSegment
+from ..core import WaveformSegment
 
 
 class UWave(WaveformSegment):
@@ -41,7 +34,7 @@ class UWave(WaveformSegment):
 
         super().__init__(duration_ms, amplitude_mv)
     
-    def generate(self, sampling_rate: int) -> np.ndarray:
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate U-wave using a narrow Gaussian.
         
         Args:
@@ -62,4 +55,4 @@ class UWave(WaveformSegment):
         # Narrower than T-wave, same polarity as T-wave
         u_wave = norm.pdf(t_scaled, 0, 15) * self.amplitude_mv / 0.03
         
-        return u_wave.astype(np.float32)
+        return t, u_wave.astype(np.float32)

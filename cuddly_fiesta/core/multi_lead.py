@@ -2,20 +2,10 @@
 
 import csv
 from typing import Dict, Tuple, Optional
-import importlib
-import os
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Fix circular dependency by dynamically importing from top-level run.py
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-run = importlib.import_module("run")
-ECGCore = run.ECGCore
-ECGBaseline = run.ECGBaseline
+from .ecg_core import ECGCore
 
 class MultiLeadECG:
     """Generate a simple 12-lead ECG from an ``ECGCore`` instance."""
@@ -23,8 +13,8 @@ class MultiLeadECG:
     def __init__(self, ecg: ECGCore):
         self.ecg = ecg
         self.time = ecg.time
-        # Helper for drawing the grid when plotting. Lazily initialised.
-        self._baseline_grid_helper: Optional[ECGBaseline] = None
+        # Helper ECGCore instance used solely for drawing the grid.
+        self._baseline_grid_helper: Optional[ECGCore] = None
         self._generate_leads()
 
     def _generate_leads(self) -> None:
@@ -56,7 +46,7 @@ class MultiLeadECG:
         # Apply lead-specific modifiers
         for name, signal in leads.items():
             mod = modifiers.get(name, {})
-            scale = mod.get("scale", 1.0)
+            scale = mod.get("scale", mod.get("QRS", {}).get("r_scale", 1.0))
             polarity = mod.get("polarity", 1.0)
             axis = np.cos(np.radians(mod.get("axis_deg", 0.0)))
             leads[name] = scale * polarity * axis * signal
@@ -106,12 +96,14 @@ class MultiLeadECG:
             ax.set_yticks([])
             ax.axhline(0, color="gray", linewidth=0.5)
             if with_grid:
-                # Reuse a single ECGBaseline instance for grid plotting
+                # Reuse a single ECGCore instance for grid plotting
                 if self._baseline_grid_helper is None:
-                    self._baseline_grid_helper = ECGBaseline(
-                        self.ecg.duration_sec, self.ecg.sampling_rate
+                    self._baseline_grid_helper = ECGCore(
+                        duration_sec=self.ecg.duration_sec,
+                        sampling_rate=self.ecg.sampling_rate,
                     )
-                self._baseline_grid_helper._add_ecg_grid(ax)
+                plt.sca(ax)
+                self._baseline_grid_helper._add_ecg_grid()
 
         fig.suptitle("12-Lead ECG", fontsize=14, fontweight="bold")
         plt.tight_layout()
@@ -152,6 +144,13 @@ class MultiLeadECG:
             for idx, t in enumerate(self.time):
                 row = [t] + [self.leads[name][idx] for name in order]
                 writer.writerow(row)
+
+    @classmethod
+    def from_ecg(cls, ecg: ECGCore, morphology: Optional[Dict] = None) -> "MultiLeadECG":
+        """Create a ``MultiLeadECG`` from an existing ``ECGCore``."""
+        if morphology:
+            ecg.lead_modifiers = morphology
+        return cls(ecg)
 
 
 def main():

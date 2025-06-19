@@ -2,16 +2,8 @@
 
 import numpy as np
 from scipy.stats import norm
-# In this trimmed test version the WaveformSegment base class is defined in the
-# top-level ``run.py`` module, so we load it dynamically.
-import importlib
-import os
-import sys
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-WaveformSegment = importlib.import_module("run").WaveformSegment
+from ..core import WaveformSegment
 
 
 class PWave(WaveformSegment):
@@ -44,7 +36,7 @@ class PWave(WaveformSegment):
 
         super().__init__(duration_ms, amplitude_mv)
     
-    def generate(self, sampling_rate: int) -> np.ndarray:
+    def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
         """Generate P-wave using asymmetric double-Gaussian model.
         
         Args:
@@ -69,4 +61,4 @@ class PWave(WaveformSegment):
         # Combine and normalize
         p_wave = (g1 * 0.7 + g2 * 0.3) * self.amplitude_mv / max(g1.max(), g2.max())
         
-        return p_wave.astype(np.float32)
+        return t, p_wave.astype(np.float32)

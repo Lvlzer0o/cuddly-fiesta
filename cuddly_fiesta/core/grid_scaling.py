@@ -50,10 +50,8 @@ class GridScaling:
             True if duration is a multiple of the small grid square,
             False otherwise.
         """
-        duration_sec = duration_ms / 1000.0
-        # Check if duration is multiple of small square
-        remainder = duration_sec % cls.SMALL_SQUARE_TIME_SEC
-        return abs(remainder) < 1e-10  # Account for floating point precision
+        ratio = duration_ms / (cls.SMALL_SQUARE_TIME_SEC * 1000.0)
+        return abs(ratio - round(ratio)) < 1e-6
 
     @classmethod
     def validate_voltage(cls, voltage_mv: float) -> bool:
