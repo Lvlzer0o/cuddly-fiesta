@@ -1,13 +1,5 @@
-import importlib
-import os
-import sys
+"""Public re-exports for core ECG classes."""
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-run = importlib.import_module("run")
-
-ECGCore = run.ECGCore
-GridScaling = run.GridScaling
+from .core import ECGCore, GridScaling
 
 __all__ = ["ECGCore", "GridScaling"]

@@ -23,12 +23,12 @@ from .bundle_branch_block import BundleBranchBlock
 from .supraventricular_tachycardia import SupraventricularTachycardia
 from .multifocal_atrial_tachycardia import MultifocalAtrialTachycardia
 from .ventricular_fibrillation import VentricularFibrillation
+from .ventricular_tachycardia import VentricularTachycardia
 from .torsades_de_pointes import TorsadesDePointes
 from .wolff_parkinson_white import WolffParkinsonWhite
 
 # TODO: Import other rhythm classes as they are implemented
 # from .atrial_flutter import AtrialFlutter
-# from .ventricular_tachycardia import VentricularTachycardia
 # from .premature_ventricular_contraction import PrematureVentricularContraction
 # from .second_degree_av_block import SecondDegreeAVBlock
 
@@ -46,6 +46,7 @@ __all__ = [
     "SupraventricularTachycardia",
     "MultifocalAtrialTachycardia",
     "VentricularFibrillation",
+    "VentricularTachycardia",
     "TorsadesDePointes",
     "WolffParkinsonWhite",
     # "AtrialFlutter",
