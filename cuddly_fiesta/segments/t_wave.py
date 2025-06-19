@@ -3,14 +3,7 @@
 import numpy as np
 from scipy.stats import skewnorm
 
-import importlib
-import os
-import sys
-
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-WaveformSegment = importlib.import_module("run").WaveformSegment
+from ..core import WaveformSegment
 
 
 class TWave(WaveformSegment):
@@ -42,7 +35,7 @@ class TWave(WaveformSegment):
 
         super().__init__(duration_ms, amplitude_mv)
     
-    def generate(self, sampling_rate: int) -> np.ndarray:
+    def generate(self, sampling_rate: int):
         """Generate T-wave using skewed Gaussian morphology.
         
         Args:
@@ -67,4 +60,4 @@ class TWave(WaveformSegment):
         shift = len(t_wave) // 2 - peak_idx
         t_wave = np.roll(t_wave, shift)
         
-        return t_wave.astype(np.float32)
+        return t, t_wave.astype(np.float32)

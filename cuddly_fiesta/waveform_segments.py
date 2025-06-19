@@ -2,25 +2,20 @@ from __future__ import annotations
 
 from typing import List, Dict
 
-import importlib
-import os
-import sys
+from .core import ArrhythmiaPattern
+from .segments import PWave, QRSComplex, TWave, UWave
+from .rhythms import (
+    NormalSinusRhythm,
+    AtrialFibrillation,
+    VentricularTachycardia,
+    WolffParkinsonWhite,
+)
 
-ROOT = os.path.dirname(os.path.dirname(__file__))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-run = importlib.import_module("run")
-
-ArrhythmiaPattern = run.ArrhythmiaPattern
-NormalSinusRhythm = run.NormalSinusRhythm
-AtrialFibrillation = run.AtrialFibrillation
-VentricularTachycardia = run.VentricularTachycardia
-WolffParkinsonWhite = run.WolffParkinsonWhite
-Pericarditis = run.Pericarditis
-PWave = run.PWave
-QRSComplex = run.QRSComplex
-TWave = run.TWave
-UWave = run.UWave
+# Optional rhythm that does not yet have a full implementation
+try:  # pragma: no cover - optional component
+    from .rhythms.pericarditis import Pericarditis
+except Exception:  # pragma: no cover - keep import flexible
+    Pericarditis = None
 
 
 class VentricularFibrillation(ArrhythmiaPattern):

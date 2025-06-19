@@ -47,7 +47,7 @@ class ECGCore:
         self.voltage = self._generate_baseline()
         
         # Track added segments for validation and debugging
-        self.segments_added: List[Tuple[float, WaveformSegment, Optional[str]]] = []
+        self.segments_added: List[Dict[str, object]] = []
         
         # Grid scaling reference (immutable)
         self.grid = GridScaling()
@@ -122,7 +122,11 @@ class ECGCore:
         np.add.at(self.voltage, indices, seg_v[valid])
         
         # Track the added segment
-        self.segments_added.append((start_time_sec, segment, lead_name))
+        self.segments_added.append({
+            "start_time": start_time_sec,
+            "segment": segment,
+            "lead": lead_name,
+        })
     
     def add_arrhythmia_pattern(
         self, 

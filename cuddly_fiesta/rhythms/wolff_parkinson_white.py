@@ -19,9 +19,10 @@ class WolffParkinsonWhite(NormalSinusRhythm):
         Args:
             pr_interval_ms: The PR interval in milliseconds (typically < 120ms).
         """
-        super().__init__(pr_interval_ms=pr_interval_ms, **kwargs)
+        super().__init__(**kwargs)
         if pr_interval_ms >= 120:
             raise ValueError("WPW syndrome requires a PR interval < 120ms.")
+        self.pr_interval_ms = pr_interval_ms
 
     def _generate_cycle(self, ecg: ECGCore) -> list[tuple[PWave | QRSComplex | TWave, float]]:
         """
@@ -52,3 +53,7 @@ class WolffParkinsonWhite(NormalSinusRhythm):
             (qrs_complex, pr_interval_sec),
             (t_wave, t_wave_start_time),
         ]
+
+    def get_lead_morphology(self) -> dict:
+        """Return lead-specific morphology overrides."""
+        return {"V2": {"scale": 1.5}}

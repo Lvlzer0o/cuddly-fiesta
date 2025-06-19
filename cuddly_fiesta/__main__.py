@@ -8,7 +8,6 @@ Use `python -m cuddly_fiesta --help` for usage details.
 """
 
 import argparse
-import importlib
 from typing import List, Optional
 
 import matplotlib.pyplot as plt
@@ -17,20 +16,18 @@ from . import agents
 from .ecg_animation import animate_ecg
 from .ecg_core import ECGCore
 from .multi_lead import MultiLeadECG
-from .waveform_segments import NormalSinusRhythm
-
-# The original functionality was consolidated into the `run.py` script.
-# We now import functions from there dynamically.
-run = importlib.import_module("run")
+from .waveform_segments import NormalSinusRhythm, AtrialFibrillation
 
 
 def _cmd_baseline(_args: argparse.Namespace) -> None:
     """Handles the 'baseline' subcommand.
 
-    Generates and displays a baseline ECG plot by calling `run.demo_baseline()`.
-    The `_args` parameter is currently unused by this specific command.
+    Generates and displays a baseline ECG plot.
+    The `_args` parameter is currently unused by this command.
     """
-    run.demo_baseline()
+    ecg = ECGCore(duration_sec=2, sampling_rate=1000)
+    NormalSinusRhythm().apply_to_ecg(ecg)
+    ecg.plot(show_grid=True)
 
 
 def _cmd_animate(args: argparse.Namespace) -> None:
@@ -50,17 +47,21 @@ def _cmd_gui(_args: argparse.Namespace) -> None:
 
     Launches the Tk-based GUI interface.
     """
-    run.run_gui()
+    print("GUI functionality not available in this simplified build.")
 
 
 def _cmd_demo_normal(_args: argparse.Namespace) -> None:
     """Handles the 'demo normal' subcommand."""
-    run.demo_single_beat()
+    ecg = ECGCore(duration_sec=2, sampling_rate=1000)
+    NormalSinusRhythm(heart_rate_bpm=70).apply_to_ecg(ecg)
+    ecg.plot(show_grid=True)
 
 
 def _cmd_demo_afib(_args: argparse.Namespace) -> None:
     """Handles the 'demo afib' subcommand."""
-    run.demo_arrhythmias()
+    ecg = ECGCore(duration_sec=2, sampling_rate=1000)
+    AtrialFibrillation().apply_to_ecg(ecg)
+    ecg.plot(show_grid=True)
 
 
 def _cmd_agent_run_all(_args: argparse.Namespace) -> None:

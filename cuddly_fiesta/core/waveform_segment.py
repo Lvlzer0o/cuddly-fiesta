@@ -42,20 +42,12 @@ class WaveformSegment(ABC):
             raise ValueError(f"Duration must be positive, got {self.duration_ms} ms")
             
         if not GridScaling.validate_timing(self.duration_ms):
-            # Snap to nearest grid line and warn
             snapped = GridScaling.snap_to_grid_time(self.duration_ms / 1000.0) * 1000.0
-            raise ValueError(
-                f"Duration {self.duration_ms} ms doesn't align with ECG grid. "
-                f"Use {snapped:.1f} ms instead."
-            )
-            
+            self.duration_ms = snapped
+
         if not GridScaling.validate_voltage(self.amplitude_mv):
-            # Snap to nearest grid line and warn
             snapped = GridScaling.snap_to_grid_voltage(self.amplitude_mv)
-            raise ValueError(
-                f"Amplitude {self.amplitude_mv} mV doesn't align with ECG grid. "
-                f"Use {snapped:.1f} mV instead."
-            )
+            self.amplitude_mv = snapped
     
     @abstractmethod
     def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:
