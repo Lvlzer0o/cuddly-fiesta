@@ -152,7 +152,7 @@ class NormalSinusRhythm(ArrhythmiaPattern):
 - Grid scaling always preserved
 - Implemented patterns: Normal Sinus Rhythm, Atrial Fibrillation,
   Ventricular Tachycardia, Premature Ventricular Contraction,
-  Second Degree AV Block, and **Atrial Flutter (sawtooth F-waves)**
+  Second Degree AV Block, and **Atrial Flutter (sawtooth F-waves, adjustable conduction)**
 
 ## 🔧 Usage Examples
 
