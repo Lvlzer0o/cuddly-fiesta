@@ -1,6 +1,8 @@
 # ECG Generator - Consolidated Version
 
-This is a consolidated single-file version of the ECG Generator application. All functionality has been merged into `run.py` for ease of use.
+This document describes the single-file variant of the ECG Generator.
+The authoritative source remains the modular `cuddly_fiesta` package.
+`run.py` in this repository is now a thin wrapper that delegates to the package.
 
 ## Installation
 
