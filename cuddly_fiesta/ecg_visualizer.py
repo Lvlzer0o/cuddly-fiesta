@@ -11,6 +11,9 @@ from typing import Dict, Any, Optional, List, Union
 import matplotlib
 matplotlib.use("TkAgg")  # Ensure Tk backend for smooth GUI
 
+# Set dark theme
+plt.style.use('dark_background')
+
 from .core import ECGCore, MultiLeadECG
 from .waveform_segments import (
     NormalSinusRhythm, AtrialFibrillation, AtrialFlutter,
@@ -54,6 +57,7 @@ class ECGVisualizer:
         """Initialize the ECG visualizer."""
         self.master = master
         self.master.title("ECG Visualizer")
+        self.master.configure(bg='#1a1a1a')  # Dark background
         
         # ECG parameters
         self.sampling_rate = 1000
@@ -63,10 +67,20 @@ class ECGVisualizer:
         self.animation = None
         self.is_playing = False
         self.show_12_lead = False  # Toggle for 12-lead view
+        self.current_frame = 0  # Track animation frame
         
         # Additional parameters
         self.show_grid = tk.BooleanVar(value=True)
         self.speed = tk.DoubleVar(value=1.0)  # 1x speed
+        
+        # Dark theme colors
+        self.colors = {
+            'bg': '#1a1a1a',
+            'fg': '#00ff00',  # Neon green
+            'grid': '#333333',
+            'text': '#ffffff',
+            'accent': '#00aa00'
+        }
         
         # Initialize ECG first
         self.update_ecg()
@@ -75,13 +89,71 @@ class ECGVisualizer:
         self.multi_lead = None
         
         # Setup UI
+        self.setup_dark_theme()
         self.setup_ui()
+    
+    def setup_dark_theme(self):
+        """Configure dark theme for TTK widgets."""
+        style = ttk.Style()
+        
+        # Configure the theme
+        style.theme_use('clam')  # Use clam as base theme
+        
+        # Configure styles for dark theme
+        style.configure('TLabel', 
+                       background=self.colors['bg'], 
+                       foreground=self.colors['text'])
+        
+        style.configure('TFrame', 
+                       background=self.colors['bg'])
+        
+        style.configure('TLabelFrame', 
+                       background=self.colors['bg'], 
+                       foreground=self.colors['text'],
+                       borderwidth=1,
+                       relief='solid')
+        
+        style.configure('TLabelFrame.Label', 
+                       background=self.colors['bg'], 
+                       foreground=self.colors['accent'])
+        
+        style.configure('TButton', 
+                       background='#333333', 
+                       foreground=self.colors['text'],
+                       borderwidth=1,
+                       focuscolor='none')
+        
+        style.map('TButton',
+                 background=[('active', '#555555'),
+                           ('pressed', '#222222')])
+        
+        style.configure('TCombobox', 
+                       background='#333333', 
+                       foreground=self.colors['text'],
+                       fieldbackground='#333333',
+                       borderwidth=1)
+        
+        style.configure('TScale', 
+                       background=self.colors['bg'],
+                       troughcolor='#333333',
+                       borderwidth=1)
+        
+        style.configure('TCheckbutton', 
+                       background=self.colors['bg'], 
+                       foreground=self.colors['text'],
+                       focuscolor='none')
+        
+        style.map('TCheckbutton',
+                 background=[('active', self.colors['bg'])])
     
     def setup_ui(self):
         """Setup the user interface."""
         # Main frame
         main_frame = ttk.Frame(self.master, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Apply dark background to main window
+        self.master.configure(bg=self.colors['bg'])
         
         # Control panel
         control_frame = ttk.LabelFrame(main_frame, text="Controls", padding="5")
@@ -170,23 +242,28 @@ class ECGVisualizer:
         
         ttk.Button(btn_frame, text="⟳", width=3, command=self.reset_animation).pack(side=tk.LEFT, padx=2)
         
-        # Plot area
-        self.fig, self.ax = plt.subplots(figsize=(10, 4))
+        # Plot area with dark theme
+        self.fig, self.ax = plt.subplots(figsize=(10, 4), facecolor=self.colors['bg'])
+        self.fig.patch.set_facecolor(self.colors['bg'])
+        self.ax.set_facecolor(self.colors['bg'])
+        
         self.canvas = FigureCanvasTkAgg(self.fig, master=main_frame)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.canvas.get_tk_widget().configure(bg=self.colors['bg'])
         
         # Navigation toolbar
         self.toolbar = NavigationToolbar2Tk(self.canvas, main_frame)
         self.toolbar.update()
         
-        # Initialize plot
-        self.line, = self.ax.plot([], [], 'b-')
+        # Initialize plot with neon green color
+        self.line, = self.ax.plot([], [], color=self.colors['fg'], linewidth=2)
         self.ax.set_xlim(0, self.duration_sec)
         self.ax.set_ylim(-2, 2)
-        self.ax.set_xlabel('Time (s)')
-        self.ax.set_ylabel('Amplitude (mV)')
-        self.ax.set_title('ECG Waveform')
-        self.ax.grid(self.show_grid.get())
+        self.ax.set_xlabel('Time (s)', color=self.colors['text'])
+        self.ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
+        self.ax.set_title('ECG Waveform', color=self.colors['text'])
+        self.ax.tick_params(colors=self.colors['text'])
+        self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
         
         # Initialize animation
         self.reset_animation()
@@ -237,16 +314,26 @@ class ECGVisualizer:
     
     def update_plot(self, frame=None):
         """Update the plot with current ECG data."""
+        if frame is not None:
+            self.current_frame = frame
+            
+        # For animation mode, show progressive ECG trace
+        if self.animation is not None and frame is not None:
+            return self.animate_frame(frame)
+        
+        # For static display, show full ECG
         self.fig.clear()
         
         if self.ecg is None or not hasattr(self.ecg, 'time') or not hasattr(self.ecg, 'voltage'):
             ax = self.fig.add_subplot(111)
+            ax.set_facecolor(self.colors['bg'])
             ax.text(0.5, 0.5, 'No ECG data', 
                    horizontalalignment='center',
                    verticalalignment='center',
-                   transform=ax.transAxes)
+                   transform=ax.transAxes,
+                   color=self.colors['text'])
             self.canvas.draw()
-            return
+            return []
             
         time = self.ecg.time
         
@@ -262,49 +349,92 @@ class ECGVisualizer:
             axes = []
             for i in range(12):
                 ax = self.fig.add_subplot(6, 2, i+1)
+                ax.set_facecolor(self.colors['bg'])
                 axes.append(ax)
                 
                 # Plot each lead
                 lead_data = getattr(self.multi_lead, f'lead_{leads[i].lower()}')
-                ax.plot(time, lead_data, 'b-', linewidth=0.8)
+                ax.plot(time, lead_data, color=self.colors['fg'], linewidth=1.2)
                 
                 # Add lead label
-                ax.text(0.02, 0.9, leads[i], transform=ax.transAxes, fontweight='bold')
+                ax.text(0.02, 0.9, leads[i], transform=ax.transAxes, 
+                       fontweight='bold', color=self.colors['text'])
                 
                 # Only show x-axis on bottom row
                 if i < 10:
                     ax.set_xticklabels([])
                 else:
-                    ax.set_xlabel('Time (s)')
+                    ax.set_xlabel('Time (s)', color=self.colors['text'])
                     
-                # Set y-axis limits
+                # Set y-axis limits and styling
                 ax.set_ylim(-2, 2)
-                ax.grid(self.show_grid.get())
+                ax.tick_params(colors=self.colors['text'])
+                ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
                 
             # Adjust spacing between subplots
             self.fig.subplots_adjust(hspace=0.4, wspace=0.3)
-            self.fig.suptitle(f'12-Lead ECG - {self.current_rhythm}', y=0.98)
+            self.fig.suptitle(f'12-Lead ECG - {self.current_rhythm}', 
+                            y=0.98, color=self.colors['text'])
             
         else:
             # Single lead view
             ax = self.fig.add_subplot(111)
+            ax.set_facecolor(self.colors['bg'])
             voltage = self.ecg.voltage
             
-            # Plot the ECG
-            ax.plot(time, voltage, 'b-', linewidth=1.5)
+            # Plot the ECG with neon green
+            ax.plot(time, voltage, color=self.colors['fg'], linewidth=2)
             
-            # Set labels and title
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Amplitude (mV)')
-            ax.set_title(f'ECG - {self.current_rhythm}')
+            # Set labels and title with dark theme
+            ax.set_xlabel('Time (s)', color=self.colors['text'])
+            ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
+            ax.set_title(f'ECG - {self.current_rhythm}', color=self.colors['text'])
+            ax.tick_params(colors=self.colors['text'])
             
             # Set grid if enabled
-            ax.grid(self.show_grid.get())
+            ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
             
             # Adjust y-axis to show full signal
             ax.set_ylim(min(voltage) - 0.5, max(voltage) + 0.5)
         
         self.canvas.draw()
+        return []
+    
+    def animate_frame(self, frame):
+        """Animate a single frame for the scrolling ECG."""
+        if self.ecg is None or not hasattr(self.ecg, 'time') or not hasattr(self.ecg, 'voltage'):
+            return
+        
+        # Clear the current plot
+        self.ax.clear()
+        self.ax.set_facecolor(self.colors['bg'])
+        
+        # Calculate how much data to show (scrolling window)
+        window_size = int(self.sampling_rate * 3)  # 3 seconds of data
+        end_idx = min(frame * 20, len(self.ecg.time))
+        start_idx = max(0, end_idx - window_size)
+        
+        # Get the data window
+        time_window = self.ecg.time[start_idx:end_idx]
+        voltage_window = self.ecg.voltage[start_idx:end_idx]
+        
+        if len(time_window) > 0:
+            # Plot the ECG trace
+            self.ax.plot(time_window, voltage_window, color=self.colors['fg'], linewidth=2)
+            
+            # Set the viewing window
+            time_range = time_window[-1] - time_window[0] if len(time_window) > 1 else 3
+            self.ax.set_xlim(time_window[0], time_window[0] + max(time_range, 3))
+            self.ax.set_ylim(min(voltage_window) - 0.5, max(voltage_window) + 0.5)
+            
+            # Style the plot
+            self.ax.set_xlabel('Time (s)', color=self.colors['text'])
+            self.ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
+            self.ax.set_title(f'ECG - {self.current_rhythm} (Live)', color=self.colors['text'])
+            self.ax.tick_params(colors=self.colors['text'])
+            self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
+        
+        # Don't return anything since blit=False
     
     def toggle_animation(self):
         """Toggle animation play/pause."""
@@ -325,7 +455,7 @@ class ECGVisualizer:
     
     def on_grid_toggle(self):
         """Toggle grid visibility."""
-        self.ax.grid(self.show_grid.get())
+        self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
         self.canvas.draw_idle()
     
     def on_hr_change(self, val):
@@ -341,31 +471,45 @@ class ECGVisualizer:
         if not hasattr(self, "ecg"):
             self.update_ecg()
         
+        # Properly cleanup old animation
         if hasattr(self, 'animation') and self.animation is not None:
             try:
                 self.animation.event_source.stop()
             except Exception:
                 pass
-            self.animation._stop()
+            try:
+                if hasattr(self.animation, '_stop'):
+                    self.animation._stop()
+            except Exception:
+                pass
             self.animation = None
         
-        self.line.set_data([], [])
-        self.ax.set_xlim(0, self.duration_sec)
-        self.ax.grid(self.show_grid.get())
-        self.canvas.draw()
+        # Reset current frame
+        self.current_frame = 0
         
-        interval_ms = int(20 / self.speed.get())
-        self.animation = FuncAnimation(
-            self.fig,
-            self.update_plot,
-            frames=len(self.ecg.time),
-            interval=interval_ms,
-            blit=True,
-            repeat=False,
-            cache_frame_data=False
-        )
-        self.is_playing = False
-        self.play_btn.config(text="▶")
+        # Update plot to show initial state
+        self.update_plot()
+        
+        # Create new animation WITHOUT blitting to avoid axis issues
+        try:
+            interval_ms = max(1, int(50 / self.speed.get()))  # Slower for stability
+            frames = len(self.ecg.time) // 20  # Even fewer frames
+            
+            self.animation = FuncAnimation(
+                self.fig,
+                self.animate_frame,
+                frames=frames,
+                interval=interval_ms,
+                blit=False,  # Disable blitting to avoid axis issues
+                repeat=True,
+                cache_frame_data=False
+            )
+            self.is_playing = False
+            self.play_btn.config(text="▶")
+        except Exception as e:
+            print(f"Animation setup error: {e}")
+            # Fallback to static display
+            self.update_plot()
 
 def run_visualizer():
     """Run the ECG visualizer application."""
