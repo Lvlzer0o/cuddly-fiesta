@@ -45,9 +45,11 @@ def _cmd_animate(args: argparse.Namespace) -> None:
 def _cmd_gui(_args: argparse.Namespace) -> None:
     """Handles the 'gui' subcommand.
 
-    Launches the Tk-based GUI interface.
+    Launch the Tkinter-based ECG GUI.
     """
-    print("GUI functionality not available in this simplified build.")
+    from .gui.ekg_ui import main as gui_main
+
+    gui_main()
 
 
 def _cmd_demo_normal(_args: argparse.Namespace) -> None:

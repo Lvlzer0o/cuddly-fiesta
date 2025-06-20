@@ -32,7 +32,9 @@ python run.py --animate
 python run.py --animate --multi
 
 # Run interactive GUI (requires tkinter)
-python run.py --gui
+python -m cuddly_fiesta gui
+# or run the console script
+ecg-gui
 ```
 
 ### Demo Modes
@@ -78,8 +80,13 @@ python run.py --animate --interval 20
 Launch the interactive Tkinter GUI:
 
 ```bash
-python run.py --gui
+python -m cuddly_fiesta gui
+# or simply use
+ecg-gui
 ```
+
+After launching, use the **Pattern** drop-down to select rhythms such as
+*Normal Sinus Rhythm* or *Ventricular Tachycardia*.
 
 Features:
 - Real-time 12-lead ECG display

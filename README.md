@@ -72,7 +72,13 @@ Install the core dependencies and run the consolidated entry point:
 python -m pip install -r requirements.txt
 python -m cuddly_fiesta demo normal
 python -m cuddly_fiesta gui
+# or simply run the console script
+ecg-gui
 ```
+
+Once installed, the command launches the Tkinter interface. Use the **Pattern**
+drop-down to pick rhythms such as *Normal Sinus Rhythm* or *Atrial Fibrillation*
+and watch the leads update in real time.
 
 For a list of available commands run:
 
