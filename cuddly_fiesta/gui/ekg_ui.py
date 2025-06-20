@@ -12,6 +12,7 @@ from .ecg_core import ArrhythmiaPattern, ECGCore
 from .multi_lead import MultiLeadECG
 from .waveform_segments import (
     AtrialFibrillation,
+    AtrialFlutter,
     NormalSinusRhythm,
     VentricularTachycardia,
 )
@@ -35,6 +36,7 @@ class ECGGui:
         self.pattern_classes: Dict[str, Type[ArrhythmiaPattern]] = {
             "Normal Sinus Rhythm": NormalSinusRhythm,
             "Atrial Fibrillation": AtrialFibrillation,
+            "Atrial Flutter": AtrialFlutter,
             "Ventricular Tachycardia": VentricularTachycardia,
         }
 
