@@ -71,7 +71,7 @@ Install the core dependencies and run the consolidated entry point:
 ```bash
 python -m pip install -r requirements.txt
 python -m cuddly_fiesta --demo all      # generate example plots
-python -m cuddly_fiesta --gui           # start the Tk GUI (requires tkinter)
+python -m cuddly_fiesta gui
 ```
 
 For a list of available commands run:
