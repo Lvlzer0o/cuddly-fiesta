@@ -1,6 +1,7 @@
 """QRS complex segment for ECG waveforms."""
 
 import numpy as np
+from typing import Tuple
 
 
 def _gaussian(n: int, std: float) -> np.ndarray:

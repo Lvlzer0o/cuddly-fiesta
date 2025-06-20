@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.stats import norm
+from typing import Tuple
 
 from ..core import WaveformSegment
 
