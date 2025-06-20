@@ -16,6 +16,7 @@ from .normal_sinus import NormalSinusRhythm
 from .sinus_bradycardia import SinusBradycardia
 from .sinus_tachycardia import SinusTachycardia
 from .atrial_fibrillation import AtrialFibrillation
+from .atrial_flutter import AtrialFlutter
 from .asystole import Asystole
 from .first_degree_av_block import FirstDegreeAVBlock
 from .third_degree_av_block import ThirdDegreeAVBlock
@@ -49,7 +50,7 @@ __all__ = [
     "VentricularTachycardia",
     "TorsadesDePointes",
     "WolffParkinsonWhite",
-    # "AtrialFlutter",
+    "AtrialFlutter",
     # "VentricularTachycardia",
     # "PrematureVentricularContraction",
     # "SecondDegreeAVBlock",

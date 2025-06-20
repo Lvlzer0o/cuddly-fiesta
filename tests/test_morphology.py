@@ -16,6 +16,26 @@ class TestLeadMorphology(unittest.TestCase):
         amp_v5 = np.max(np.abs(ml.get_lead("V5")))
         self.assertLess(amp_v1, amp_v5)
 
+    def test_pwave_orientation(self):
+        ecg = ECGCore(duration_sec=2, sampling_rate=1000)
+        NormalSinusRhythm(heart_rate_bpm=60).apply_to_ecg(ecg)
+        ml = MultiLeadECG.from_ecg(ecg)
+
+        p_info = next(
+            s for s in ecg.segments_added if s["segment"].__class__.__name__ == "PWave"
+        )
+        start = p_info["start_time"]
+        dur = p_info["segment"].duration_ms / 1000
+        mask = (ecg.time >= start) & (ecg.time < start + dur)
+
+        lead_I = ml.get_lead("I")[mask]
+        lead_II = ml.get_lead("II")[mask]
+        lead_aVR = ml.get_lead("aVR")[mask]
+
+        self.assertGreater(lead_I.max(), abs(lead_I.min()))
+        self.assertGreater(lead_II.max(), abs(lead_II.min()))
+        self.assertGreater(abs(lead_aVR.min()), lead_aVR.max())
+
 
 if __name__ == "__main__":
     unittest.main()
