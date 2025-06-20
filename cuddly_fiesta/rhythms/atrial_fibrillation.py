@@ -35,10 +35,10 @@ class AtrialFibrillation(ArrhythmiaPattern):
         Raises:
             ValueError: If ventricular rate is outside the expected range
         """
-        if not (60 <= ventricular_rate_bpm <= 180):
-            raise ValueError(
-                f"Ventricular rate {ventricular_rate_bpm} bpm outside range (60-180 bpm)"
-            )
+        if not (30 <= ventricular_rate_bpm <= 250):
+            # Clamp to reasonable range instead of crashing
+            ventricular_rate_bpm = max(30, min(250, ventricular_rate_bpm))
+            print(f"Warning: Ventricular rate clamped to {ventricular_rate_bpm} bpm")
             
         super().__init__("Atrial Fibrillation", lead_modifiers)
         self.ventricular_rate_bpm = ventricular_rate_bpm
