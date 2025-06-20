@@ -33,10 +33,10 @@ class NormalSinusRhythm(ArrhythmiaPattern):
         """
         super().__init__("Normal Sinus Rhythm", lead_modifiers)
         
-        if not (50 <= heart_rate_bpm <= 120):
-            raise ValueError(
-                f"Heart rate {heart_rate_bpm} outside reasonable range (50-120 bpm)"
-            )
+        if not (30 <= heart_rate_bpm <= 250):
+            # Clamp to reasonable range instead of crashing
+            heart_rate_bpm = max(30, min(250, heart_rate_bpm))
+            print(f"Warning: Heart rate clamped to {heart_rate_bpm} bpm")
 
         self.heart_rate_bpm = heart_rate_bpm
         self.duration_sec = duration_sec

@@ -282,6 +282,8 @@ class ECGVisualizer:
             sig = inspect.signature(rhythm_class.__init__)
             if "heart_rate_bpm" in sig.parameters:
                 kwargs["heart_rate_bpm"] = self.heart_rate
+            if "duration_sec" in sig.parameters:
+                kwargs["duration_sec"] = self.duration_sec
         except (ValueError, TypeError):
             # Fallback if signature inspection fails
             pass
@@ -352,8 +354,8 @@ class ECGVisualizer:
                 ax.set_facecolor(self.colors['bg'])
                 axes.append(ax)
                 
-                # Plot each lead
-                lead_data = getattr(self.multi_lead, f'lead_{leads[i].lower()}')
+                # Plot each lead using the correct method
+                lead_data = self.multi_lead.get_lead(leads[i])
                 ax.plot(time, lead_data, color=self.colors['fg'], linewidth=1.2)
                 
                 # Add lead label
@@ -409,30 +411,61 @@ class ECGVisualizer:
         self.ax.clear()
         self.ax.set_facecolor(self.colors['bg'])
         
-        # Calculate how much data to show (scrolling window)
-        window_size = int(self.sampling_rate * 3)  # 3 seconds of data
-        end_idx = min(frame * 20, len(self.ecg.time))
-        start_idx = max(0, end_idx - window_size)
+        # Calculate scrolling window (like a real ECG monitor)
+        window_duration = 6.0  # Show 6 seconds of data
+        samples_per_frame = 30  # Advance by 30 samples per frame
         
-        # Get the data window
-        time_window = self.ecg.time[start_idx:end_idx]
-        voltage_window = self.ecg.voltage[start_idx:end_idx]
+        # Calculate the current position in the ECG data
+        current_sample = frame * samples_per_frame
+        window_samples = int(window_duration * self.sampling_rate)
+        
+        # Get the data window with wraparound for continuous scrolling
+        total_samples = len(self.ecg.time)
+        start_sample = current_sample % total_samples
+        end_sample = (start_sample + window_samples) % total_samples
+        
+        if start_sample < end_sample:
+            # Normal case - no wraparound
+            time_window = self.ecg.time[start_sample:end_sample]
+            voltage_window = self.ecg.voltage[start_sample:end_sample]
+        else:
+            # Wraparound case - concatenate end and beginning
+            time_window = np.concatenate([
+                self.ecg.time[start_sample:],
+                self.ecg.time[:end_sample] + self.ecg.time[-1]
+            ])
+            voltage_window = np.concatenate([
+                self.ecg.voltage[start_sample:],
+                self.ecg.voltage[:end_sample]
+            ])
         
         if len(time_window) > 0:
-            # Plot the ECG trace
-            self.ax.plot(time_window, voltage_window, color=self.colors['fg'], linewidth=2)
+            # Plot the ECG trace with neon green
+            self.ax.plot(time_window, voltage_window, color=self.colors['fg'], 
+                        linewidth=2)
             
-            # Set the viewing window
-            time_range = time_window[-1] - time_window[0] if len(time_window) > 1 else 3
-            self.ax.set_xlim(time_window[0], time_window[0] + max(time_range, 3))
-            self.ax.set_ylim(min(voltage_window) - 0.5, max(voltage_window) + 0.5)
+            # Set fixed viewing window for smooth scrolling
+            self.ax.set_xlim(time_window[0], time_window[0] + window_duration)
             
-            # Style the plot
+            # Auto-scale Y axis to show the signal properly
+            if len(voltage_window) > 0:
+                y_min, y_max = min(voltage_window), max(voltage_window)
+                y_margin = max(0.5, (y_max - y_min) * 0.1)
+                self.ax.set_ylim(y_min - y_margin, y_max + y_margin)
+            else:
+                self.ax.set_ylim(-2, 2)
+            
+            # Style the plot with medical monitor aesthetics
             self.ax.set_xlabel('Time (s)', color=self.colors['text'])
             self.ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
-            self.ax.set_title(f'ECG - {self.current_rhythm} (Live)', color=self.colors['text'])
+            self.ax.set_title(f'ECG Monitor - {self.current_rhythm}', 
+                            color=self.colors['text'], fontweight='bold')
             self.ax.tick_params(colors=self.colors['text'])
-            self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
+            
+            # Add simple grid
+            if self.show_grid.get():
+                self.ax.grid(True, color=self.colors['grid'], alpha=0.3, 
+                           linewidth=0.5)
         
         # Don't return anything since blit=False
     
@@ -492,8 +525,10 @@ class ECGVisualizer:
         
         # Create new animation WITHOUT blitting to avoid axis issues
         try:
-            interval_ms = max(1, int(50 / self.speed.get()))  # Slower for stability
-            frames = len(self.ecg.time) // 20  # Even fewer frames
+            interval_ms = max(50, int(150 / self.speed.get()))  # More conservative timing
+            total_samples = len(self.ecg.time)
+            samples_per_frame = 30
+            frames = total_samples // samples_per_frame  # One loop through data
             
             self.animation = FuncAnimation(
                 self.fig,
