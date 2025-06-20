@@ -7,6 +7,7 @@ from .segments import PWave, QRSComplex, TWave, UWave
 from .rhythms import (
     NormalSinusRhythm,
     AtrialFibrillation,
+    AtrialFlutter,
     VentricularTachycardia,
     WolffParkinsonWhite,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "ArrhythmiaPattern",
     "NormalSinusRhythm",
     "AtrialFibrillation",
+    "AtrialFlutter",
     "VentricularTachycardia",
     "VentricularFibrillation",
     "PulselessElectricalActivity",

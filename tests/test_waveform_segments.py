@@ -10,6 +10,7 @@ from cuddly_fiesta.ecg_core import ECGCore, GridScaling
 from cuddly_fiesta.multi_lead import MultiLeadECG
 from cuddly_fiesta.waveform_segments import (
     AtrialFibrillation,
+    AtrialFlutter,
     NormalSinusRhythm,
     TWave,
     UWave,
@@ -68,6 +69,7 @@ class TestArrhythmiaPatterns(unittest.TestCase):
     def test_all_patterns_grid_alignment(self):
         self._check_pattern(NormalSinusRhythm())
         self._check_pattern(AtrialFibrillation())
+        self._check_pattern(AtrialFlutter())
         self._check_pattern(VentricularTachycardia())
         self._check_pattern(VentricularFibrillation())
         self._check_pattern(PulselessElectricalActivity())
