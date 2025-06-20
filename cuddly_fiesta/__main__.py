@@ -49,7 +49,9 @@ def _cmd_gui(_args: argparse.Namespace) -> None:
     """
     try:
         from .gui import ekg_ui
-    except Exception as exc:  # pragma: no cover - platform dependent
+        import logging
+        logging.exception("Tkinter GUI is unavailable:") # Log the full exception with traceback
+        return
         print("Tkinter GUI is unavailable:", exc)
         return
 
