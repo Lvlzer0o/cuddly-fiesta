@@ -1,17 +1,28 @@
 # Python artifacts
 *.pyc
 __pycache__/
+*.egg-info/
 
 # Virtual environments
-#venv/
-#.venv/
+venv/
+.venv/
 env/
 ENV/
 .env/
+.env
+.env.*
 
 # Output directories
 output/
 outputs/
 build/
 dist/
+
+# Local/editor metadata
+.idea/
+
+# Generated analysis and bundle artifacts
+*.sarif
+*.sarif.json
+*.pyz
 

@@ -8,9 +8,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from .ecg_core import ArrhythmiaPattern, ECGCore
-from .multi_lead import MultiLeadECG
-from .waveform_segments import (
+from ..core import ArrhythmiaPattern, ECGCore, MultiLeadECG
+from ..waveform_segments import (
     AtrialFibrillation,
     AtrialFlutter,
     NormalSinusRhythm,
