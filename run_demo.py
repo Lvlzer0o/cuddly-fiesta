@@ -18,7 +18,7 @@ from cuddly_fiesta.waveform_segments import (
     VentricularTachycardia,
     VentricularFibrillation,
     WolffParkinsonWhite,
-    PulselessElectricalActivity
+    PulselessElectricalActivity,
     FirstDegreeAVBlock,
     SecondDegreeAVBlockType1,
     SecondDegreeAVBlockType2,
