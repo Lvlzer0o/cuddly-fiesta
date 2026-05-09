@@ -158,7 +158,7 @@ def main():
     import os
     from pathlib import Path
 
-    from .waveform_segments import NormalSinusRhythm
+    from ..rhythms import NormalSinusRhythm
 
     ecg = ECGCore(duration_sec=2, sampling_rate=1000)
     pattern = NormalSinusRhythm(heart_rate_bpm=70)
