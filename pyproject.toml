@@ -18,13 +18,10 @@ dependencies = [
 ]
 
 [project.scripts]
-ecg-core-demo = "cuddly_fiesta.ecg_core:main"
-p-wave-generator = "cuddly_fiesta.p_wave_generator:main"
-verify-improvements = "cuddly_fiesta.verify_improvements:main"
-p-wave-summary = "cuddly_fiesta.p_wave_summary:print_p_wave_summary"
-ecg-multilead-demo = "cuddly_fiesta.multi_lead:main"
-ecg-animate = "cuddly_fiesta.ecg_animation:main"
-ecg-gui = "cuddly_fiesta.ekg_ui:main"
+ecg-generator = "cuddly_fiesta.__main__:main"
+ecg-multilead-demo = "cuddly_fiesta.core.multi_lead:main"
+ecg-gui = "cuddly_fiesta.gui.ekg_ui:main"
+ecg-visualizer = "cuddly_fiesta.ecg_visualizer:run_visualizer"
 
-[tool.setuptools]
-packages = ["cuddly_fiesta"]
+[tool.setuptools.packages.find]
+include = ["cuddly_fiesta*"]
