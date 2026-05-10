@@ -616,8 +616,11 @@ class ECGVisualizer:
             playback_speed = 1.0
         playback_speed = max(0.01, playback_speed)
         target_fps = self._target_fps()
-        step = max(1, int(round(self.sampling_rate * playback_speed / target_fps)))
         delay = max(1, int(round(1000.0 / target_fps)))
+        step = max(
+            1,
+            int(round(self.sampling_rate * playback_speed * delay / 1000.0)),
+        )
         return step, delay
 
     def _animate_once(self) -> None:
