@@ -28,17 +28,12 @@ class SupraventricularTachycardia(NormalSinusRhythm):
         P-waves are often difficult to see in SVT, so we'll generate them with a
         very small amplitude.
         """
-        # Generate P-wave with a small amplitude
-        p_wave = PWave(
-            sampling_rate=ecg.sampling_rate,
-            p_duration_ms=80,
-            p_amplitude_mv=0.05  # Very small P-wave
-        )
-        qrs_complex = QRSComplex(ecg.sampling_rate)
-        t_wave = TWave(ecg.sampling_rate)
+        p_wave = PWave(amplitude_mv=0.05, duration_ms=80)
+        qrs_complex = QRSComplex(duration_ms=80)
+        t_wave = TWave(amplitude_mv=0.2, duration_ms=120)
 
         # Timing calculations
-        pr_interval_sec = self.pr_interval_ms / 1000.0
+        pr_interval_sec = 0.12
         qrs_duration_sec = qrs_complex.duration_ms / 1000.0
         st_segment_sec = 0.080  # 80ms, can be shorter in tachycardia
         t_wave_start_time = pr_interval_sec + qrs_duration_sec + st_segment_sec
@@ -48,3 +43,17 @@ class SupraventricularTachycardia(NormalSinusRhythm):
             (qrs_complex, pr_interval_sec),
             (t_wave, t_wave_start_time),
         ]
+
+    def define_pattern(self) -> None:
+        """Define regular narrow-complex SVT with hidden P waves."""
+        self.segments = []
+        current_time = 0.0
+
+        while current_time < self.duration_sec:
+            qrs = QRSComplex(duration_ms=80)
+            t_wave = TWave(amplitude_mv=0.2, duration_ms=120)
+
+            self.add_segment(current_time, qrs)
+            self.add_segment(current_time + 0.16, t_wave)
+
+            current_time += self.rr_interval_sec

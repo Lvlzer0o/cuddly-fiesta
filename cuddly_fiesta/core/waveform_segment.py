@@ -8,9 +8,6 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
 
-from .grid_scaling import GridScaling
-
-
 class WaveformSegment(ABC):
     """Abstract base class for all ECG waveform segments.
     
@@ -26,28 +23,20 @@ class WaveformSegment(ABC):
             amplitude_mv: Peak amplitude of the segment in millivolts
             
         Raises:
-            ValueError: If duration or amplitude don't align with ECG grid
+            ValueError: If duration is invalid
         """
         self.duration_ms = duration_ms
         self.amplitude_mv = amplitude_mv
         self._validate_parameters()
     
     def _validate_parameters(self) -> None:
-        """Validate that segment parameters align with ECG grid specifications.
+        """Validate basic segment parameters.
         
         Raises:
-            ValueError: If duration or amplitude are invalid
+            ValueError: If duration is invalid
         """
         if self.duration_ms <= 0:
             raise ValueError(f"Duration must be positive, got {self.duration_ms} ms")
-            
-        if not GridScaling.validate_timing(self.duration_ms):
-            snapped = GridScaling.snap_to_grid_time(self.duration_ms / 1000.0) * 1000.0
-            self.duration_ms = snapped
-
-        if not GridScaling.validate_voltage(self.amplitude_mv):
-            snapped = GridScaling.snap_to_grid_voltage(self.amplitude_mv)
-            self.amplitude_mv = snapped
     
     @abstractmethod
     def generate(self, sampling_rate: int) -> Tuple[np.ndarray, np.ndarray]:

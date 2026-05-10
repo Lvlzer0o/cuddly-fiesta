@@ -1,557 +1,622 @@
-"""Interactive ECG visualization with controls."""
+"""Canonical clinical ECG visualizer and export helpers."""
 
+from __future__ import annotations
+
+from pathlib import Path
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, messagebox, ttk
+from typing import Any, Dict, Iterable, Optional, Tuple
+
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.animation import FuncAnimation
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.ticker import MultipleLocator
 import numpy as np
-from typing import Dict, Any, Optional, List, Union
-
-import matplotlib
-matplotlib.use("TkAgg")  # Ensure Tk backend for smooth GUI
-
-# Set dark theme
-plt.style.use('dark_background')
 
 from .core import ECGCore, MultiLeadECG
-from .waveform_segments import (
-    NormalSinusRhythm, AtrialFibrillation, AtrialFlutter,
-    VentricularTachycardia, VentricularFibrillation,
-    WolffParkinsonWhite, PulselessElectricalActivity
+from .ui_registry import (
+    DISPLAY_CONTROL_SPECS,
+    DURATION,
+    RHYTHM_REGISTRY,
+    ParameterSpec,
+    create_rhythm,
 )
 
-# Dynamically collect all rhythm classes from rhythms package
-try:
-    import inspect
-    from . import rhythms as _rhythm_pkg
-    _ALL_RHYTHMS = {
-        name: getattr(_rhythm_pkg, name)
-        for name in getattr(_rhythm_pkg, "__all__", [])
-        if (hasattr(_rhythm_pkg, name) and 
-            not inspect.isabstract(getattr(_rhythm_pkg, name)) and 
-            hasattr(getattr(_rhythm_pkg, name), 'apply_to_ecg'))
-    }
-except Exception as e:
-    print(f"Warning: Could not load all rhythm classes: {e}")
-    _ALL_RHYTHMS = {}
 
-# Base rhythms that are known to work
-_BASE_RHYTHMS = {
-    "Normal Sinus Rhythm": NormalSinusRhythm,
-    "Atrial Fibrillation": AtrialFibrillation,
-    "Atrial Flutter": AtrialFlutter,
-    "Ventricular Tachycardia": VentricularTachycardia,
-    "Ventricular Fibrillation": VentricularFibrillation,
-    "WPW": WolffParkinsonWhite,
-    "PEA": PulselessElectricalActivity
-}
+LEAD_ORDER = (
+    "I",
+    "II",
+    "III",
+    "aVR",
+    "aVL",
+    "aVF",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+)
+
+CLINICAL_12_LEAD_LAYOUT = (
+    ("I", "aVR", "V1", "V4"),
+    ("II", "aVL", "V2", "V5"),
+    ("III", "aVF", "V3", "V6"),
+)
+
+ECG_PAPER = "#fffafa"
+ECG_GRID_MAJOR = "#e7a6a6"
+ECG_GRID_MINOR = "#f5d7d7"
+ECG_TRACE = "#1d1d1d"
+ECG_TRACE_FOCUS = "#b3002d"
+PANEL_BG = "#eef2f4"
+
+
+def _scaled_signal(signal: np.ndarray, gain: float) -> np.ndarray:
+    return signal * (gain / 10.0)
+
+
+def _signal_ylim(signals: Iterable[np.ndarray]) -> Tuple[float, float]:
+    populated = [np.asarray(signal) for signal in signals if np.asarray(signal).size]
+    if not populated:
+        return -2.5, 2.5
+
+    values = np.concatenate(populated)
+    y_min = float(np.min(values))
+    y_max = float(np.max(values))
+    span = max(y_max - y_min, 1.0)
+    padding = max(span * 0.1, 0.2)
+    return y_min - padding, y_max + padding
+
+
+def _remove_figure_axes(figure) -> None:
+    for ax in list(figure.axes):
+        ax.remove()
+    suptitle = getattr(figure, "_suptitle", None)
+    if suptitle is not None:
+        suptitle.remove()
+        figure._suptitle = None
+
+
+def _ensure_axes(figure, view_mode: str):
+    layout = getattr(figure, "_cuddly_layout", None)
+    if view_mode == "12-lead":
+        if layout != "12-lead" or len(figure.axes) != 12:
+            _remove_figure_axes(figure)
+            axes = figure.subplots(3, 4, sharex=True, sharey=True)
+            figure._cuddly_layout = "12-lead"
+            return axes
+        return np.asarray(figure.axes, dtype=object).reshape(3, 4)
+
+    if layout != "single" or len(figure.axes) != 1:
+        _remove_figure_axes(figure)
+        ax = figure.add_subplot(111)
+        figure._cuddly_layout = "single"
+        return ax
+    return figure.axes[0]
+
+
+def _set_trace(ax, time: np.ndarray, signal: np.ndarray, color: str, width: float):
+    if ax.lines:
+        line = ax.lines[0]
+        line.set_data(time, signal)
+        line.set_color(color)
+        line.set_linewidth(width)
+        for extra in ax.lines[1:]:
+            extra.remove()
+        return line
+    return ax.plot(time, signal, color=color, linewidth=width)[0]
+
+
+def _set_lead_label(ax, lead_name: str, color: str) -> None:
+    label = getattr(ax, "_cuddly_lead_label", None)
+    if label is None:
+        label = ax.text(
+            0.02,
+            0.86,
+            lead_name,
+            transform=ax.transAxes,
+            fontsize=10,
+            fontweight="bold",
+            color=color,
+        )
+        ax._cuddly_lead_label = label
+        return
+    label.set_text(lead_name)
+    label.set_color(color)
+
+
+def _style_ecg_axis(
+    ax,
+    duration_sec: float,
+    gain: float,
+    paper_speed: float,
+    show_grid: bool,
+) -> None:
+    ax.set_facecolor(ECG_PAPER)
+    ax.set_xlim(0, duration_sec)
+    ax.set_yticks([])
+    ax.tick_params(axis="x", labelsize=8, colors="#374151")
+    ax.tick_params(axis="y", length=0)
+    for spine in ax.spines.values():
+        spine.set_color("#c9c9c9")
+        spine.set_linewidth(0.6)
+
+    if show_grid:
+        ax.xaxis.set_major_locator(MultipleLocator(5.0 / paper_speed))
+        ax.xaxis.set_minor_locator(MultipleLocator(1.0 / paper_speed))
+        ax.yaxis.set_major_locator(MultipleLocator(5.0 / gain))
+        ax.yaxis.set_minor_locator(MultipleLocator(1.0 / gain))
+        ax.grid(which="major", color=ECG_GRID_MAJOR, linewidth=0.55)
+        ax.grid(which="minor", color=ECG_GRID_MINOR, linewidth=0.35)
+    else:
+        ax.grid(False, which="both")
+
+
+def render_ecg_figure(
+    ecg: ECGCore,
+    view_mode: str = "single",
+    lead_focus: str = "II",
+    show_grid: bool = True,
+    gain: float = 10,
+    paper_speed: float = 25,
+    figure=None,
+    multi: Optional[MultiLeadECG] = None,
+):
+    """Render an ECGCore as a clinical single-lead or 12-lead figure."""
+    if figure is None:
+        figure = plt.figure(figsize=(13, 8 if view_mode == "12-lead" else 4.5))
+    figure.patch.set_facecolor(ECG_PAPER)
+
+    if multi is None:
+        multi = MultiLeadECG.from_ecg(ecg)
+    if view_mode == "12-lead":
+        lead_signals = {
+            lead_name: _scaled_signal(multi.get_lead(lead_name), gain)
+            for lead_name in LEAD_ORDER
+        }
+        y_limits = _signal_ylim(lead_signals.values())
+        axes = _ensure_axes(figure, "12-lead")
+        for row_index, row in enumerate(CLINICAL_12_LEAD_LAYOUT):
+            for col_index, lead_name in enumerate(row):
+                ax = axes[row_index][col_index]
+                trace_color = (
+                    ECG_TRACE_FOCUS if lead_name == lead_focus else ECG_TRACE
+                )
+                line_width = 1.5 if lead_name == lead_focus else 0.9
+                _set_trace(ax, ecg.time, lead_signals[lead_name], trace_color, line_width)
+                _set_lead_label(ax, lead_name, trace_color)
+                _style_ecg_axis(
+                    ax, ecg.duration_sec, gain, paper_speed, show_grid
+                )
+                ax.set_ylim(*y_limits)
+        figure.suptitle(
+            f"12-lead ECG | {paper_speed:g} mm/s | {gain:g} mm/mV",
+            fontsize=12,
+            color="#111827",
+        )
+        figure.tight_layout(rect=(0, 0, 1, 0.96))
+        return figure, axes
+
+    lead_name = lead_focus if lead_focus in LEAD_ORDER else "II"
+    signal = _scaled_signal(multi.get_lead(lead_name), gain)
+    ax = _ensure_axes(figure, "single")
+    _set_trace(ax, ecg.time, signal, ECG_TRACE_FOCUS, 1.2)
+    _style_ecg_axis(ax, ecg.duration_sec, gain, paper_speed, show_grid)
+    ax.set_ylim(*_signal_ylim((signal,)))
+    ax.set_xlabel("Time (s)")
+    ax.set_title(
+        f"Lead {lead_name} | {paper_speed:g} mm/s | {gain:g} mm/mV",
+        fontsize=12,
+        color="#111827",
+    )
+    figure.tight_layout()
+    return figure, ax
+
+
+def export_ecg_image(
+    ecg: ECGCore,
+    path,
+    view_mode: str = "12-lead",
+    lead_focus: str = "II",
+    show_grid: bool = True,
+    gain: float = 10,
+    paper_speed: float = 25,
+) -> None:
+    """Export a clinical ECG image."""
+    figure, _ = render_ecg_figure(
+        ecg,
+        view_mode=view_mode,
+        lead_focus=lead_focus,
+        show_grid=show_grid,
+        gain=gain,
+        paper_speed=paper_speed,
+    )
+    figure.savefig(path, dpi=200, bbox_inches="tight")
+    plt.close(figure)
+
+
+def export_ecg_csv(ecg: ECGCore, path) -> None:
+    """Export event-synthesized 12-lead ECG data to CSV."""
+    MultiLeadECG.from_ecg(ecg).export_to_csv(str(path))
+
 
 class ECGVisualizer:
-    """Interactive ECG visualization with controls."""
-    
-    # Start with base rhythms and update with dynamically loaded ones
-    RHYTHM_TYPES = {**_BASE_RHYTHMS, **_ALL_RHYTHMS}
-    
-    def __init__(self, master):
-        """Initialize the ECG visualizer."""
-        self.master = master
-        self.master.title("ECG Visualizer")
-        self.master.configure(bg='#1a1a1a')  # Dark background
-        
-        # ECG parameters
-        self.sampling_rate = 1000
-        self.duration_sec = 10
-        self.heart_rate = 72
-        self.current_rhythm = "Normal Sinus Rhythm"
-        self.animation = None
-        self.is_playing = False
-        self.show_12_lead = False  # Toggle for 12-lead view
-        self.current_frame = 0  # Track animation frame
-        
-        # Additional parameters
-        self.show_grid = tk.BooleanVar(value=True)
-        self.speed = tk.DoubleVar(value=1.0)  # 1x speed
-        
-        # Dark theme colors
-        self.colors = {
-            'bg': '#1a1a1a',
-            'fg': '#00ff00',  # Neon green
-            'grid': '#333333',
-            'text': '#ffffff',
-            'accent': '#00aa00'
-        }
-        
-        # Initialize ECG first
-        self.update_ecg()
-        
-        # Initialize multi-lead ECG
-        self.multi_lead = None
-        
-        # Setup UI
-        self.setup_dark_theme()
-        self.setup_ui()
-    
-    def setup_dark_theme(self):
-        """Configure dark theme for TTK widgets."""
-        style = ttk.Style()
-        
-        # Configure the theme
-        style.theme_use('clam')  # Use clam as base theme
-        
-        # Configure styles for dark theme
-        style.configure('TLabel', 
-                       background=self.colors['bg'], 
-                       foreground=self.colors['text'])
-        
-        style.configure('TFrame', 
-                       background=self.colors['bg'])
-        
-        style.configure('TLabelFrame', 
-                       background=self.colors['bg'], 
-                       foreground=self.colors['text'],
-                       borderwidth=1,
-                       relief='solid')
-        
-        style.configure('TLabelFrame.Label', 
-                       background=self.colors['bg'], 
-                       foreground=self.colors['accent'])
-        
-        style.configure('TButton', 
-                       background='#333333', 
-                       foreground=self.colors['text'],
-                       borderwidth=1,
-                       focuscolor='none')
-        
-        style.map('TButton',
-                 background=[('active', '#555555'),
-                           ('pressed', '#222222')])
-        
-        style.configure('TCombobox', 
-                       background='#333333', 
-                       foreground=self.colors['text'],
-                       fieldbackground='#333333',
-                       borderwidth=1)
-        
-        style.configure('TScale', 
-                       background=self.colors['bg'],
-                       troughcolor='#333333',
-                       borderwidth=1)
-        
-        style.configure('TCheckbutton', 
-                       background=self.colors['bg'], 
-                       foreground=self.colors['text'],
-                       focuscolor='none')
-        
-        style.map('TCheckbutton',
-                 background=[('active', self.colors['bg'])])
-    
-    def setup_ui(self):
-        """Setup the user interface."""
-        # Main frame
-        main_frame = ttk.Frame(self.master, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Apply dark background to main window
-        self.master.configure(bg=self.colors['bg'])
-        
-        # Control panel
-        control_frame = ttk.LabelFrame(main_frame, text="Controls", padding="5")
-        control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-        
-        # Rhythm selection
-        ttk.Label(control_frame, text="Rhythm:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        self.rhythm_var = tk.StringVar(value=self.current_rhythm)
-        rhythm_menu = ttk.Combobox(
-            control_frame, 
-            textvariable=self.rhythm_var,
-            values=list(self.RHYTHM_TYPES.keys()),
-            state="readonly"
-        )
-        rhythm_menu.grid(row=0, column=1, sticky=tk.EW, pady=2)
-        rhythm_menu.configure(width=25)
-        rhythm_menu.bind("<<ComboboxSelected>>", self.on_rhythm_change)
-        
-        # Heart rate control
-        ttk.Label(control_frame, text="Heart Rate (bpm):").grid(row=1, column=0, sticky=tk.W, pady=2)
-        self.hr_var = tk.IntVar(value=self.heart_rate)
-        hr_scale = ttk.Scale(
-            control_frame, 
-            from_=30, 
-            to=220, 
-            orient=tk.HORIZONTAL,
-            variable=self.hr_var,
-            command=self.on_hr_change
-        )
-        hr_scale.grid(row=1, column=1, sticky=tk.EW, pady=2)
-        self.hr_label = ttk.Label(control_frame, text=f"{self.heart_rate} bpm")
-        self.hr_label.grid(row=1, column=2, sticky=tk.W)
-        
-        # Duration control
-        ttk.Label(control_frame, text="Duration (s):").grid(row=2, column=0, sticky=tk.W, pady=2)
-        self.duration_var = tk.IntVar(value=self.duration_sec)
-        duration_scale = ttk.Scale(
-            control_frame, 
-            from_=5, 
-            to=30, 
-            orient=tk.HORIZONTAL,
-            variable=self.duration_var,
-            command=lambda _: self.on_parameter_change()
-        )
-        duration_scale.grid(row=2, column=1, sticky=tk.EW, pady=2)
-        
-        # Speed control
-        ttk.Label(control_frame, text="Speed (0.5x-10x):").grid(row=3, column=0, sticky=tk.W, pady=2)
-        speed_scale = ttk.Scale(
-            control_frame,
-            from_=0.5,
-            to=10.0,
-            orient=tk.HORIZONTAL,
-            variable=self.speed,
-            command=self.on_speed_change
-        )
-        speed_scale.grid(row=3, column=1, sticky=tk.EW, pady=2)
-        self.speed_label = ttk.Label(control_frame, text="1.0x")
-        self.speed_label.grid(row=3, column=2, sticky=tk.W)
-        
-        # Grid toggle
-        grid_check = ttk.Checkbutton(
-            control_frame,
-            text="Show Grid",
-            variable=self.show_grid,
-            command=self.on_grid_toggle
-        )
-        grid_check.grid(row=4, column=0, columnspan=2, sticky=tk.W, padx=2, pady=4)
-        
-        # 12-lead view toggle
-        self.lead_view_var = tk.BooleanVar(value=self.show_12_lead)
-        lead_view_check = ttk.Checkbutton(
-            control_frame, 
-            text="12-Lead View", 
-            variable=self.lead_view_var,
-            command=self.toggle_lead_view
-        )
-        lead_view_check.grid(row=5, column=0, columnspan=2, sticky=tk.W, padx=2, pady=4)
-        
-        # Control buttons
-        btn_frame = ttk.Frame(control_frame)
-        btn_frame.grid(row=6, column=0, columnspan=2, pady=10)
-        
-        self.play_btn = ttk.Button(btn_frame, text="▶", width=3, command=self.toggle_animation)
-        self.play_btn.pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(btn_frame, text="⟳", width=3, command=self.reset_animation).pack(side=tk.LEFT, padx=2)
-        
-        # Plot area with dark theme
-        self.fig, self.ax = plt.subplots(figsize=(10, 4), facecolor=self.colors['bg'])
-        self.fig.patch.set_facecolor(self.colors['bg'])
-        self.ax.set_facecolor(self.colors['bg'])
-        
-        self.canvas = FigureCanvasTkAgg(self.fig, master=main_frame)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self.canvas.get_tk_widget().configure(bg=self.colors['bg'])
-        
-        # Navigation toolbar
-        self.toolbar = NavigationToolbar2Tk(self.canvas, main_frame)
-        self.toolbar.update()
-        
-        # Initialize plot with neon green color
-        self.line, = self.ax.plot([], [], color=self.colors['fg'], linewidth=2)
-        self.ax.set_xlim(0, self.duration_sec)
-        self.ax.set_ylim(-2, 2)
-        self.ax.set_xlabel('Time (s)', color=self.colors['text'])
-        self.ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
-        self.ax.set_title('ECG Waveform', color=self.colors['text'])
-        self.ax.tick_params(colors=self.colors['text'])
-        self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
-        
-        # Initialize animation
-        self.reset_animation()
-    
-    def update_ecg(self):
-        """Update the ECG with current parameters."""
-        import inspect
-        rhythm_class = self.RHYTHM_TYPES[self.current_rhythm]
-        self.ecg = ECGCore(
-            duration_sec=self.duration_sec,
-            sampling_rate=self.sampling_rate
-        )
-        # Prepare kwargs only if the rhythm supports them
-        kwargs = {}
-        try:
-            sig = inspect.signature(rhythm_class.__init__)
-            if "heart_rate_bpm" in sig.parameters:
-                kwargs["heart_rate_bpm"] = self.heart_rate
-            if "duration_sec" in sig.parameters:
-                kwargs["duration_sec"] = self.duration_sec
-        except (ValueError, TypeError):
-            # Fallback if signature inspection fails
-            pass
-        try:
-            rhythm_instance = rhythm_class(**kwargs)
-        except TypeError:
-            # Constructor didn't accept kwargs; instantiate without
-            rhythm_instance = rhythm_class()
-        rhythm_instance.apply_to_ecg(self.ecg)
-        
-        # Reset multi_lead to force regeneration on next plot
-        self.multi_lead = None
-    
-    def on_rhythm_change(self, event=None):
-        """Handle rhythm type change."""
-        self.current_rhythm = self.rhythm_var.get()
-        self.on_parameter_change()
-    
-    def toggle_lead_view(self):
-        """Toggle between single lead and 12-lead view."""
-        self.show_12_lead = self.lead_view_var.get()
-        self.update_plot()
-    
-    def on_parameter_change(self):
-        """Handle parameter changes."""
-        self.heart_rate = self.hr_var.get()
-        self.duration_sec = self.duration_var.get()
-        self.update_ecg()
-        self.reset_animation()
-    
-    def update_plot(self, frame=None):
-        """Update the plot with current ECG data."""
-        if frame is not None:
-            self.current_frame = frame
-            
-        # For animation mode, show progressive ECG trace
-        if self.animation is not None and frame is not None:
-            return self.animate_frame(frame)
-        
-        # For static display, show full ECG
-        self.fig.clear()
-        
-        if self.ecg is None or not hasattr(self.ecg, 'time') or not hasattr(self.ecg, 'voltage'):
-            ax = self.fig.add_subplot(111)
-            ax.set_facecolor(self.colors['bg'])
-            ax.text(0.5, 0.5, 'No ECG data', 
-                   horizontalalignment='center',
-                   verticalalignment='center',
-                   transform=ax.transAxes,
-                   color=self.colors['text'])
-            self.canvas.draw()
-            return []
-            
-        time = self.ecg.time
-        
-        if self.show_12_lead:
-            # Create 12-lead view
-            if self.multi_lead is None:
-                self.multi_lead = MultiLeadECG.from_ecg(self.ecg)
-                
-            # Define the layout for 12-lead ECG
-            leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
-            
-            # Create subplots with shared x-axis for synchronized scrolling
-            axes = []
-            for i in range(12):
-                ax = self.fig.add_subplot(6, 2, i+1)
-                ax.set_facecolor(self.colors['bg'])
-                axes.append(ax)
-                
-                # Plot each lead using the correct method
-                lead_data = self.multi_lead.get_lead(leads[i])
-                ax.plot(time, lead_data, color=self.colors['fg'], linewidth=1.2)
-                
-                # Add lead label
-                ax.text(0.02, 0.9, leads[i], transform=ax.transAxes, 
-                       fontweight='bold', color=self.colors['text'])
-                
-                # Only show x-axis on bottom row
-                if i < 10:
-                    ax.set_xticklabels([])
-                else:
-                    ax.set_xlabel('Time (s)', color=self.colors['text'])
-                    
-                # Set y-axis limits and styling
-                ax.set_ylim(-2, 2)
-                ax.tick_params(colors=self.colors['text'])
-                ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
-                
-            # Adjust spacing between subplots
-            self.fig.subplots_adjust(hspace=0.4, wspace=0.3)
-            self.fig.suptitle(f'12-Lead ECG - {self.current_rhythm}', 
-                            y=0.98, color=self.colors['text'])
-            
-        else:
-            # Single lead view
-            ax = self.fig.add_subplot(111)
-            ax.set_facecolor(self.colors['bg'])
-            voltage = self.ecg.voltage
-            
-            # Plot the ECG with neon green
-            ax.plot(time, voltage, color=self.colors['fg'], linewidth=2)
-            
-            # Set labels and title with dark theme
-            ax.set_xlabel('Time (s)', color=self.colors['text'])
-            ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
-            ax.set_title(f'ECG - {self.current_rhythm}', color=self.colors['text'])
-            ax.tick_params(colors=self.colors['text'])
-            
-            # Set grid if enabled
-            ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
-            
-            # Adjust y-axis to show full signal
-            ax.set_ylim(min(voltage) - 0.5, max(voltage) + 0.5)
-        
-        self.canvas.draw()
-        return []
-    
-    def animate_frame(self, frame):
-        """Animate a single frame for the scrolling ECG."""
-        if self.ecg is None or not hasattr(self.ecg, 'time') or not hasattr(self.ecg, 'voltage'):
-            return
-        
-        # Clear the current plot
-        self.ax.clear()
-        self.ax.set_facecolor(self.colors['bg'])
-        
-        # Calculate scrolling window (like a real ECG monitor)
-        window_duration = 6.0  # Show 6 seconds of data
-        samples_per_frame = 30  # Advance by 30 samples per frame
-        
-        # Calculate the current position in the ECG data
-        current_sample = frame * samples_per_frame
-        window_samples = int(window_duration * self.sampling_rate)
-        
-        # Get the data window with wraparound for continuous scrolling
-        total_samples = len(self.ecg.time)
-        start_sample = current_sample % total_samples
-        end_sample = (start_sample + window_samples) % total_samples
-        
-        if start_sample < end_sample:
-            # Normal case - no wraparound
-            time_window = self.ecg.time[start_sample:end_sample]
-            voltage_window = self.ecg.voltage[start_sample:end_sample]
-        else:
-            # Wraparound case - concatenate end and beginning
-            time_window = np.concatenate([
-                self.ecg.time[start_sample:],
-                self.ecg.time[:end_sample] + self.ecg.time[-1]
-            ])
-            voltage_window = np.concatenate([
-                self.ecg.voltage[start_sample:],
-                self.ecg.voltage[:end_sample]
-            ])
-        
-        if len(time_window) > 0:
-            # Plot the ECG trace with neon green
-            self.ax.plot(time_window, voltage_window, color=self.colors['fg'], 
-                        linewidth=2)
-            
-            # Set fixed viewing window for smooth scrolling
-            self.ax.set_xlim(time_window[0], time_window[0] + window_duration)
-            
-            # Auto-scale Y axis to show the signal properly
-            if len(voltage_window) > 0:
-                y_min, y_max = min(voltage_window), max(voltage_window)
-                y_margin = max(0.5, (y_max - y_min) * 0.1)
-                self.ax.set_ylim(y_min - y_margin, y_max + y_margin)
-            else:
-                self.ax.set_ylim(-2, 2)
-            
-            # Style the plot with medical monitor aesthetics
-            self.ax.set_xlabel('Time (s)', color=self.colors['text'])
-            self.ax.set_ylabel('Amplitude (mV)', color=self.colors['text'])
-            self.ax.set_title(f'ECG Monitor - {self.current_rhythm}', 
-                            color=self.colors['text'], fontweight='bold')
-            self.ax.tick_params(colors=self.colors['text'])
-            
-            # Add simple grid
-            if self.show_grid.get():
-                self.ax.grid(True, color=self.colors['grid'], alpha=0.3, 
-                           linewidth=0.5)
-        
-        # Don't return anything since blit=False
-    
-    def toggle_animation(self):
-        """Toggle animation play/pause."""
-        if self.is_playing:
-            self.animation.event_source.stop()
-            self.play_btn.config(text="▶")
-        else:
-            self.animation.event_source.start()
-            self.play_btn.config(text="⏸")
-        self.is_playing = not self.is_playing
-    
-    def on_speed_change(self, val=None):
-        """Handle changes in playback speed."""
-        if self.animation is not None:
-            interval_ms = int(20 / self.speed.get())
-            self.animation.event_source.interval = max(1, interval_ms)
-        self.speed_label.config(text=f"{self.speed.get():.1f}x")
-    
-    def on_grid_toggle(self):
-        """Toggle grid visibility."""
-        self.ax.grid(self.show_grid.get(), color=self.colors['grid'], alpha=0.5)
-        self.canvas.draw_idle()
-    
-    def on_hr_change(self, val):
-        """Handle HR slider movement."""
-        bpm = int(float(val))
-        self.hr_var.set(bpm)
-        self.hr_label.config(text=f"{bpm} bpm")
-        self.on_parameter_change()
-    
-    def reset_animation(self):
-        """Reset the animation to the beginning."""
-        # Ensure we have an ECG generated
-        if not hasattr(self, "ecg"):
-            self.update_ecg()
-        
-        # Properly cleanup old animation
-        if hasattr(self, 'animation') and self.animation is not None:
-            try:
-                self.animation.event_source.stop()
-            except Exception:
-                pass
-            try:
-                if hasattr(self.animation, '_stop'):
-                    self.animation._stop()
-            except Exception:
-                pass
-            self.animation = None
-        
-        # Reset current frame
-        self.current_frame = 0
-        
-        # Update plot to show initial state
-        self.update_plot()
-        
-        # Create new animation WITHOUT blitting to avoid axis issues
-        try:
-            interval_ms = max(50, int(150 / self.speed.get()))  # More conservative timing
-            total_samples = len(self.ecg.time)
-            samples_per_frame = 30
-            frames = total_samples // samples_per_frame  # One loop through data
-            
-            self.animation = FuncAnimation(
-                self.fig,
-                self.animate_frame,
-                frames=frames,
-                interval=interval_ms,
-                blit=False,  # Disable blitting to avoid axis issues
-                repeat=True,
-                cache_frame_data=False
-            )
-            self.is_playing = False
-            self.play_btn.config(text="▶")
-        except Exception as e:
-            print(f"Animation setup error: {e}")
-            # Fallback to static display
-            self.update_plot()
+    """Tk application for clinical ECG inspection."""
 
-def run_visualizer():
-    """Run the ECG visualizer application."""
+    CONTROL_FIELDS = tuple(control.name for control in DISPLAY_CONTROL_SPECS)
+
+    def __init__(self, master: tk.Tk):
+        self.master = master
+        self.master.title("ECG Clinical Workstation")
+        self.master.geometry("1280x820")
+
+        self.sampling_rate = 1000
+        self.current_ecg: Optional[ECGCore] = None
+        self.current_multi: Optional[MultiLeadECG] = None
+        self.animation_timer = None
+        self.is_playing = False
+        self.frame_index = 0
+        self._plot_state: Optional[Tuple[str, str, bool, float, float]] = None
+
+        self.rhythm_label_to_key = {
+            spec.label: key for key, spec in RHYTHM_REGISTRY.items()
+        }
+        self.rhythm_var = tk.StringVar(
+            value=RHYTHM_REGISTRY["normal_sinus"].label
+        )
+        self.param_vars: Dict[str, tk.Variable] = {}
+
+        self.view_mode_var = tk.StringVar(value="12-lead")
+        self.lead_focus_var = tk.StringVar(value="II")
+        self.show_grid_var = tk.BooleanVar(value=True)
+        self.gain_var = tk.DoubleVar(value=10.0)
+        self.paper_speed_var = tk.DoubleVar(value=25.0)
+        self.speed_var = tk.DoubleVar(value=1.0)
+        self.status_var = tk.StringVar(value="Ready")
+
+        self._setup_style()
+        self._setup_ui()
+        self._build_parameter_controls()
+        self.update_ecg()
+
+    def _setup_style(self) -> None:
+        self.master.configure(bg=PANEL_BG)
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("TFrame", background=PANEL_BG)
+        style.configure("TLabel", background=PANEL_BG, foreground="#1f2933")
+        style.configure("TLabelframe", background=PANEL_BG)
+        style.configure("TLabelframe.Label", background=PANEL_BG)
+        style.configure("TButton", padding=(8, 4))
+
+    def _setup_ui(self) -> None:
+        main = ttk.Frame(self.master, padding=10)
+        main.pack(fill=tk.BOTH, expand=True)
+
+        self.control_frame = ttk.Frame(main, width=320)
+        self.control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+
+        rhythm_frame = ttk.LabelFrame(self.control_frame, text="Rhythm")
+        rhythm_frame.pack(fill=tk.X, pady=(0, 8))
+        rhythm_menu = ttk.Combobox(
+            rhythm_frame,
+            textvariable=self.rhythm_var,
+            values=[spec.label for spec in RHYTHM_REGISTRY.values()],
+            state="readonly",
+            width=30,
+        )
+        rhythm_menu.pack(fill=tk.X, padx=8, pady=8)
+        rhythm_menu.bind("<<ComboboxSelected>>", self._on_rhythm_change)
+
+        self.param_frame = ttk.LabelFrame(self.control_frame, text="Parameters")
+        self.param_frame.pack(fill=tk.X, pady=(0, 8))
+
+        display_frame = ttk.LabelFrame(self.control_frame, text="Display")
+        display_frame.pack(fill=tk.X, pady=(0, 8))
+        self._add_choice(
+            display_frame,
+            "View",
+            self.view_mode_var,
+            ("single", "12-lead"),
+            self.update_plot,
+        )
+        self._add_choice(
+            display_frame,
+            "Lead focus",
+            self.lead_focus_var,
+            LEAD_ORDER,
+            self.update_plot,
+        )
+        ttk.Checkbutton(
+            display_frame,
+            text="ECG grid",
+            variable=self.show_grid_var,
+            command=self.update_plot,
+        ).pack(anchor=tk.W, padx=8, pady=4)
+        self._add_spinbox(
+            display_frame,
+            "Gain",
+            self.gain_var,
+            5,
+            20,
+            1,
+            "mm/mV",
+            self.update_plot,
+        )
+        self._add_spinbox(
+            display_frame,
+            "Paper speed",
+            self.paper_speed_var,
+            12.5,
+            50,
+            12.5,
+            "mm/s",
+            self.update_plot,
+        )
+        self._add_spinbox(
+            display_frame,
+            "Playback",
+            self.speed_var,
+            0.25,
+            4,
+            0.25,
+            "x",
+            None,
+        )
+
+        action_frame = ttk.LabelFrame(self.control_frame, text="Actions")
+        action_frame.pack(fill=tk.X, pady=(0, 8))
+        ttk.Button(action_frame, text="Play / Pause", command=self.toggle_play).pack(
+            fill=tk.X, padx=8, pady=(8, 4)
+        )
+        ttk.Button(action_frame, text="Reset", command=self.reset).pack(
+            fill=tk.X, padx=8, pady=4
+        )
+        ttk.Button(action_frame, text="Export Image", command=self.export_image).pack(
+            fill=tk.X, padx=8, pady=4
+        )
+        ttk.Button(action_frame, text="Export CSV", command=self.export_csv).pack(
+            fill=tk.X, padx=8, pady=(4, 8)
+        )
+        ttk.Label(self.control_frame, textvariable=self.status_var, wraplength=280).pack(
+            fill=tk.X, pady=(4, 0)
+        )
+
+        self.figure = plt.Figure(figsize=(10, 7), facecolor=ECG_PAPER)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=main)
+        self.canvas.get_tk_widget().pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+    def _current_key(self) -> str:
+        return self.rhythm_label_to_key[self.rhythm_var.get()]
+
+    def _current_parameter_values(self) -> Dict[str, Any]:
+        values = {}
+        spec = RHYTHM_REGISTRY[self._current_key()]
+        for param in spec.parameters:
+            values[param.name] = self.param_vars[param.name].get()
+        return values
+
+    def _build_parameter_controls(self) -> None:
+        for child in self.param_frame.winfo_children():
+            child.destroy()
+        self.param_vars.clear()
+
+        spec = RHYTHM_REGISTRY[self._current_key()]
+        if not spec.parameters:
+            ttk.Label(self.param_frame, text="No rhythm parameters").pack(
+                anchor=tk.W, padx=8, pady=8
+            )
+            return
+
+        for param in spec.parameters:
+            if param.kind == "choice":
+                variable = tk.StringVar(value=str(param.default))
+                self.param_vars[param.name] = variable
+                self._add_choice(
+                    self.param_frame,
+                    param.label,
+                    variable,
+                    param.options,
+                    self.update_ecg,
+                )
+            else:
+                variable = tk.DoubleVar(value=float(param.default))
+                self.param_vars[param.name] = variable
+                self._add_spinbox(
+                    self.param_frame,
+                    param.label,
+                    variable,
+                    param.minimum,
+                    param.maximum,
+                    param.step,
+                    param.units,
+                    self.update_ecg,
+                )
+
+    def _add_choice(
+        self,
+        parent,
+        label: str,
+        variable: tk.StringVar,
+        options: Iterable[str],
+        command,
+    ) -> None:
+        row = ttk.Frame(parent)
+        row.pack(fill=tk.X, padx=8, pady=4)
+        ttk.Label(row, text=label).pack(side=tk.LEFT)
+        combo = ttk.Combobox(
+            row, textvariable=variable, values=tuple(options), state="readonly", width=12
+        )
+        combo.pack(side=tk.RIGHT)
+        if command:
+            combo.bind("<<ComboboxSelected>>", lambda _event: command())
+
+    def _add_spinbox(
+        self,
+        parent,
+        label: str,
+        variable: tk.Variable,
+        minimum: Optional[float],
+        maximum: Optional[float],
+        step: Optional[float],
+        units: str,
+        command,
+    ) -> None:
+        row = ttk.Frame(parent)
+        row.pack(fill=tk.X, padx=8, pady=4)
+        text = f"{label} ({units})" if units else label
+        ttk.Label(row, text=text).pack(side=tk.LEFT)
+        spin_kwargs = {
+            "from_": minimum if minimum is not None else 0,
+            "to": maximum if maximum is not None else 999,
+            "increment": step if step is not None else 1,
+            "textvariable": variable,
+            "width": 8,
+        }
+        if command:
+            spin_kwargs["command"] = command
+        spin = ttk.Spinbox(row, **spin_kwargs)
+        spin.pack(side=tk.RIGHT)
+        if command:
+            spin.bind("<Return>", lambda _event: command())
+            spin.bind("<FocusOut>", lambda _event: command())
+
+    def _on_rhythm_change(self, _event=None) -> None:
+        self._build_parameter_controls()
+        self.update_ecg()
+
+    def update_ecg(self) -> None:
+        try:
+            values = self._current_parameter_values()
+            duration_sec = float(values.get("duration_sec", DURATION.default))
+            rhythm = create_rhythm(self._current_key(), values)
+            ecg = ECGCore(duration_sec=duration_sec, sampling_rate=self.sampling_rate)
+            rhythm.apply_to_ecg(ecg)
+            self.current_ecg = ecg
+            self.current_multi = MultiLeadECG.from_ecg(ecg)
+            self.frame_index = 0
+            self.status_var.set(f"{rhythm.name} | {duration_sec:g} seconds")
+            self.update_plot()
+        except Exception as exc:
+            self.status_var.set(f"Could not generate rhythm: {exc}")
+            messagebox.showerror("ECG generation failed", str(exc))
+
+    def update_plot(self) -> None:
+        if self.current_ecg is None:
+            return
+        state = self._requested_plot_state(self.view_mode_var.get())
+        render_ecg_figure(
+            self.current_ecg,
+            view_mode=state[0],
+            lead_focus=state[1],
+            show_grid=state[2],
+            gain=state[3],
+            paper_speed=state[4],
+            figure=self.figure,
+            multi=self.current_multi,
+        )
+        self._plot_state = state
+        self.canvas.draw_idle()
+
+    def _requested_plot_state(
+        self, view_mode: str
+    ) -> Tuple[str, str, bool, float, float]:
+        return (
+            view_mode,
+            self.lead_focus_var.get(),
+            bool(self.show_grid_var.get()),
+            float(self.gain_var.get()),
+            float(self.paper_speed_var.get()),
+        )
+
+    def toggle_play(self) -> None:
+        if self.is_playing:
+            self.is_playing = False
+            if self.animation_timer is not None:
+                self.master.after_cancel(self.animation_timer)
+                self.animation_timer = None
+            return
+        self.is_playing = True
+        self._animate_once()
+
+    def _animate_once(self) -> None:
+        if not self.is_playing or self.current_ecg is None:
+            return
+        duration = self.current_ecg.duration_sec
+        window = max(1.0, min(6.0, duration))
+        step = max(1, int(40 * float(self.speed_var.get())))
+        self.frame_index = (self.frame_index + step) % len(self.current_ecg.time)
+        start_sec = self.frame_index / self.sampling_rate
+
+        state = self._requested_plot_state("single")
+        if self._plot_state != state or not self.figure.axes:
+            render_ecg_figure(
+                self.current_ecg,
+                view_mode=state[0],
+                lead_focus=state[1],
+                show_grid=state[2],
+                gain=state[3],
+                paper_speed=state[4],
+                figure=self.figure,
+                multi=self.current_multi,
+            )
+            self._plot_state = state
+        ax = self.figure.axes[0]
+        ax.set_xlim(start_sec, min(duration, start_sec + window))
+        self.canvas.draw_idle()
+        delay = max(30, int(120 / float(self.speed_var.get())))
+        self.animation_timer = self.master.after(delay, self._animate_once)
+
+    def reset(self) -> None:
+        self.is_playing = False
+        if self.animation_timer is not None:
+            self.master.after_cancel(self.animation_timer)
+            self.animation_timer = None
+        self.frame_index = 0
+        self.update_plot()
+
+    def export_image(self) -> None:
+        if self.current_ecg is None:
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=(("PNG image", "*.png"), ("PDF", "*.pdf")),
+        )
+        if not path:
+            return
+        export_ecg_image(
+            self.current_ecg,
+            path,
+            view_mode=self.view_mode_var.get(),
+            lead_focus=self.lead_focus_var.get(),
+            show_grid=self.show_grid_var.get(),
+            gain=float(self.gain_var.get()),
+            paper_speed=float(self.paper_speed_var.get()),
+        )
+        self.status_var.set(f"Image exported to {Path(path).name}")
+
+    def export_csv(self) -> None:
+        if self.current_ecg is None:
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=(("CSV", "*.csv"),),
+        )
+        if not path:
+            return
+        export_ecg_csv(self.current_ecg, path)
+        self.status_var.set(f"CSV exported to {Path(path).name}")
+
+
+def run_visualizer() -> None:
+    """Run the canonical ECG visualizer application."""
     root = tk.Tk()
-    root.title("ECG Visualizer")
-    app = ECGVisualizer(root)
+    ECGVisualizer(root)
     root.mainloop()
+
 
 if __name__ == "__main__":
     run_visualizer()
