@@ -18,6 +18,7 @@ from .ui_registry import (
     DURATION,
     RHYTHM_REGISTRY,
     ParameterSpec,
+    TARGET_FPS_OPTIONS,
     create_rhythm,
 )
 
@@ -257,6 +258,8 @@ class ECGVisualizer:
         self.is_playing = False
         self.frame_index = 0
         self._plot_state: Optional[Tuple[str, str, bool, float, float]] = None
+        self.current_rhythm_name = "Ready"
+        self.current_duration_sec = 0.0
 
         self.rhythm_label_to_key = {
             spec.label: key for key, spec in RHYTHM_REGISTRY.items()
@@ -272,6 +275,8 @@ class ECGVisualizer:
         self.gain_var = tk.DoubleVar(value=10.0)
         self.paper_speed_var = tk.DoubleVar(value=25.0)
         self.speed_var = tk.DoubleVar(value=1.0)
+        self.target_fps_var = tk.StringVar(value="60")
+        self.play_button_var = tk.StringVar(value="Play")
         self.status_var = tk.StringVar(value="Ready")
 
         self._setup_style()
@@ -364,12 +369,23 @@ class ECGVisualizer:
             4,
             0.25,
             "x",
-            None,
+            self._refresh_status,
+        )
+        self._add_choice(
+            display_frame,
+            "Target FPS",
+            self.target_fps_var,
+            TARGET_FPS_OPTIONS,
+            self._refresh_status,
         )
 
         action_frame = ttk.LabelFrame(self.control_frame, text="Actions")
         action_frame.pack(fill=tk.X, pady=(0, 8))
-        ttk.Button(action_frame, text="Play / Pause", command=self.toggle_play).pack(
+        ttk.Button(
+            action_frame,
+            textvariable=self.play_button_var,
+            command=self.toggle_play,
+        ).pack(
             fill=tk.X, padx=8, pady=(8, 4)
         )
         ttk.Button(action_frame, text="Reset", command=self.reset).pack(
@@ -497,8 +513,9 @@ class ECGVisualizer:
             rhythm.apply_to_ecg(ecg)
             self.current_ecg = ecg
             self.current_multi = MultiLeadECG.from_ecg(ecg)
+            self.current_rhythm_name = rhythm.name
+            self.current_duration_sec = duration_sec
             self.frame_index = 0
-            self.status_var.set(f"{rhythm.name} | {duration_sec:g} seconds")
             self.update_plot()
         except Exception as exc:
             self.status_var.set(f"Could not generate rhythm: {exc}")
@@ -519,6 +536,7 @@ class ECGVisualizer:
             multi=self.current_multi,
         )
         self._plot_state = state
+        self._refresh_status()
         self.canvas.draw_idle()
 
     def _requested_plot_state(
@@ -534,20 +552,83 @@ class ECGVisualizer:
 
     def toggle_play(self) -> None:
         if self.is_playing:
-            self.is_playing = False
+            self._set_playing(False)
             if self.animation_timer is not None:
                 self.master.after_cancel(self.animation_timer)
                 self.animation_timer = None
+            self._refresh_status()
             return
-        self.is_playing = True
+        self._set_playing(True)
         self._animate_once()
+        self._refresh_status()
+
+    def _set_playing(self, playing: bool) -> None:
+        self.is_playing = playing
+        if hasattr(self, "play_button_var"):
+            self.play_button_var.set("Pause" if playing else "Play")
+
+    def _var_value(self, name: str, default):
+        variable = getattr(self, name, None)
+        if variable is None:
+            return default
+        try:
+            return variable.get()
+        except (tk.TclError, TypeError, ValueError):
+            return default
+
+    def _status_text(self) -> str:
+        rhythm = getattr(self, "current_rhythm_name", "Ready")
+        duration = getattr(self, "current_duration_sec", 0.0)
+        state = "Playing" if getattr(self, "is_playing", False) else "Stopped"
+        plot_state = getattr(self, "_plot_state", None)
+        if plot_state:
+            view_mode, lead = plot_state[:2]
+        else:
+            view_mode = self._var_value("view_mode_var", "12-lead")
+            lead = self._var_value("lead_focus_var", "II")
+        try:
+            speed = float(self._var_value("speed_var", 1.0))
+        except (TypeError, ValueError):
+            speed = 1.0
+        fps = self._target_fps()
+        return (
+            f"{rhythm} | {duration:g}s | {state} | {view_mode} | "
+            f"Lead {lead} | {speed:g}x | {fps} FPS"
+        )
+
+    def _refresh_status(self) -> None:
+        if hasattr(self, "status_var"):
+            self.status_var.set(self._status_text())
+
+    def _target_fps(self) -> int:
+        try:
+            fps = int(float(self.target_fps_var.get()))
+        except (AttributeError, tk.TclError, TypeError, ValueError):
+            return 60
+        if str(fps) not in TARGET_FPS_OPTIONS:
+            return 60
+        return fps
+
+    def _animation_timing(self) -> Tuple[int, int]:
+        try:
+            playback_speed = float(self.speed_var.get())
+        except (AttributeError, tk.TclError, TypeError, ValueError):
+            playback_speed = 1.0
+        playback_speed = max(0.01, playback_speed)
+        target_fps = self._target_fps()
+        delay = max(1, int(round(1000.0 / target_fps)))
+        step = max(
+            1,
+            int(round(self.sampling_rate * playback_speed * delay / 1000.0)),
+        )
+        return step, delay
 
     def _animate_once(self) -> None:
         if not self.is_playing or self.current_ecg is None:
             return
         duration = self.current_ecg.duration_sec
         window = max(1.0, min(6.0, duration))
-        step = max(1, int(40 * float(self.speed_var.get())))
+        step, delay = self._animation_timing()
         self.frame_index = (self.frame_index + step) % len(self.current_ecg.time)
         start_sec = self.frame_index / self.sampling_rate
 
@@ -567,11 +648,10 @@ class ECGVisualizer:
         ax = self.figure.axes[0]
         ax.set_xlim(start_sec, min(duration, start_sec + window))
         self.canvas.draw_idle()
-        delay = max(30, int(120 / float(self.speed_var.get())))
         self.animation_timer = self.master.after(delay, self._animate_once)
 
     def reset(self) -> None:
-        self.is_playing = False
+        self._set_playing(False)
         if self.animation_timer is not None:
             self.master.after_cancel(self.animation_timer)
             self.animation_timer = None
