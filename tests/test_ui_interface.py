@@ -284,6 +284,12 @@ class TestClinicalRendering(unittest.TestCase):
                 viz.target_fps_var = DummyVar(fps)
                 self.assertEqual(viz._animation_timing(), timing)
 
+        viz = ECGVisualizer.__new__(ECGVisualizer)
+        viz.sampling_rate = 1000
+        viz.speed_var = DummyVar(2.0)
+        viz.target_fps_var = DummyVar("120")
+        self.assertEqual(viz._animation_timing(), (16, 8))
+
     def test_playback_status_text_reports_visible_runtime_state(self):
         from cuddly_fiesta.ecg_visualizer import ECGVisualizer
 
