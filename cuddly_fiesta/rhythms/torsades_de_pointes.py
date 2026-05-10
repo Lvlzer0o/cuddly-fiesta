@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 
 from ..core import ArrhythmiaPattern, ECGCore
@@ -15,6 +17,7 @@ class TorsadesDePointes(ArrhythmiaPattern):
         self,
         ventricular_rate_bpm: float = 200.0,
         twist_frequency_hz: float = 0.1,
+        duration_sec: float = 10.0,
         **kwargs,
     ):
         """
@@ -24,35 +27,40 @@ class TorsadesDePointes(ArrhythmiaPattern):
             ventricular_rate_bpm: The ventricular rate (typically 150-300 bpm).
             twist_frequency_hz: The frequency of the amplitude modulation (twisting).
         """
-        super().__init__(**kwargs)
+        super().__init__("Torsades de Pointes", **kwargs)
         self.ventricular_rate_bpm = ventricular_rate_bpm
         self.twist_frequency_hz = twist_frequency_hz
+        self.duration_sec = duration_sec
 
-    def apply_to_ecg(self, ecg: ECGCore) -> None:
+    def define_pattern(self) -> None:
+        """Define polymorphic wide-complex VT with rotating polarity."""
+        self.segments = []
+        interval_sec = 60.0 / self.ventricular_rate_bpm
+        current_time = 0.0
+
+        while current_time < self.duration_sec:
+            amplitude = 1.2 * np.cos(
+                2 * np.pi * self.twist_frequency_hz * current_time
+            )
+            qrs = QRSComplex(
+                duration_ms=140,
+                q_duration_ms=30,
+                r_duration_ms=70,
+                s_duration_ms=40,
+                r_amplitude_mv=amplitude,
+            )
+            self.add_segment(current_time, qrs)
+            current_time += interval_sec
+
+    def apply_to_ecg(
+        self, ecg: ECGCore, lead_name: Optional[str] = None
+    ) -> None:
         """
         Applies the Torsades de Pointes pattern to the ECG data.
 
         Args:
             ecg: The ECGCore object to modify.
+            lead_name: Optional target lead for the generated events.
         """
-        interval_sec = 60.0 / self.ventricular_rate_bpm
-        num_beats = int(ecg.duration_sec / interval_sec)
-
-        for i in range(num_beats):
-            beat_time = i * interval_sec
-
-            # Create a wide QRS complex, typical for ventricular rhythms
-            qrs = QRSComplex(
-                sampling_rate=ecg.sampling_rate,
-                q_duration_ms=30,
-                r_duration_ms=60,
-                s_duration_ms=30,
-            )
-
-            # Modulate the amplitude with a sine wave to create the 'twisting'
-            amplitude_modulation = np.sin(
-                2 * np.pi * self.twist_frequency_hz * beat_time
-            )
-            qrs.voltage_data *= amplitude_modulation
-
-            ecg.add_segment(qrs, beat_time)
+        self.duration_sec = ecg.duration_sec
+        super().apply_to_ecg(ecg, lead_name=lead_name)

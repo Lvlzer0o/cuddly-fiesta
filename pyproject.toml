@@ -20,7 +20,7 @@ dependencies = [
 [project.scripts]
 ecg-generator = "cuddly_fiesta.__main__:main"
 ecg-multilead-demo = "cuddly_fiesta.core.multi_lead:main"
-ecg-gui = "cuddly_fiesta.gui.ekg_ui:main"
+ecg-gui = "cuddly_fiesta.ecg_visualizer:run_visualizer"
 ecg-visualizer = "cuddly_fiesta.ecg_visualizer:run_visualizer"
 
 [tool.setuptools.packages.find]

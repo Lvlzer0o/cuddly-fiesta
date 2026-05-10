@@ -4,14 +4,21 @@ This module contains the main ECGCore class which serves as the foundation
 for generating and manipulating ECG signals with proper grid scaling and validation.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
-import warnings
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from .grid_scaling import GridScaling
 from .waveform_segment import WaveformSegment
+
+
+DEFAULT_COMPONENT_AXIS_DEG = {
+    "PWave": 60.0,
+    "QRSComplex": 60.0,
+    "TWave": 45.0,
+    "UWave": 45.0,
+}
 
 
 class ECGCore:
@@ -46,8 +53,9 @@ class ECGCore:
         # Initialize with isoelectric baseline
         self.voltage = self._generate_baseline()
         
-        # Track added segments for validation and debugging
-        self.segments_added: List[Dict[str, object]] = []
+        # Track added events for validation, debugging, and multi-lead synthesis.
+        self.events: List[Dict[str, object]] = []
+        self.segments_added = self.events
         
         # Grid scaling reference (immutable)
         self.grid = GridScaling()
@@ -121,12 +129,78 @@ class ECGCore:
         # Add the segment to the output
         np.add.at(self.voltage, indices, seg_v[valid])
         
-        # Track the added segment
-        self.segments_added.append({
+        self.events.append(
+            self._build_waveform_event(segment, start_time_sec, lead_name)
+        )
+
+    def _build_waveform_event(
+        self,
+        segment: WaveformSegment,
+        start_time_sec: float,
+        lead_name: Optional[str],
+    ) -> Dict[str, object]:
+        component_type = segment.__class__.__name__
+        duration_ms = float(getattr(segment, "duration_ms", 0.0))
+        event = {
+            # Backward-compatible keys used by existing tests and helpers.
             "start_time": start_time_sec,
             "segment": segment,
             "lead": lead_name,
-        })
+            # Event metadata used by event-based lead synthesis.
+            "component_type": component_type,
+            "timing": {
+                "start_sec": start_time_sec,
+                "duration_sec": duration_ms / 1000.0,
+                "duration_ms": duration_ms,
+            },
+            "shape": self._describe_segment_shape(segment),
+            "axis": {
+                "degrees": float(
+                    getattr(
+                        segment,
+                        "axis_deg",
+                        DEFAULT_COMPONENT_AXIS_DEG.get(component_type, 0.0),
+                    )
+                )
+            },
+            "lead_profile": {
+                "profile": "standard_12_lead",
+                "target_lead": lead_name,
+            },
+        }
+        metadata = getattr(segment, "event_metadata", None)
+        if isinstance(metadata, dict):
+            for key, value in metadata.items():
+                if (
+                    key == "lead_profile"
+                    and isinstance(value, dict)
+                    and isinstance(event["lead_profile"], dict)
+                ):
+                    event["lead_profile"].update(value)
+                else:
+                    event[key] = value
+        return event
+
+    @staticmethod
+    def _describe_segment_shape(segment: WaveformSegment) -> Dict[str, object]:
+        shape: Dict[str, object] = {"class_name": segment.__class__.__name__}
+        for attr in (
+            "duration_ms",
+            "amplitude_mv",
+            "q_duration_ms",
+            "r_duration_ms",
+            "s_duration_ms",
+            "q_amplitude_mv",
+            "r_amplitude_mv",
+            "s_amplitude_mv",
+            "delta_wave_duration_ms",
+        ):
+            if hasattr(segment, attr):
+                value = getattr(segment, attr)
+                if isinstance(value, (int, float, np.floating)):
+                    value = float(value)
+                shape[attr] = value
+        return shape
     
     def add_arrhythmia_pattern(
         self, 

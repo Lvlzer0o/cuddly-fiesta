@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict, Optional
+from typing import Optional
 import numpy as np
 
 from .base import ArrhythmiaPattern
@@ -47,9 +47,9 @@ class VentricularTachycardia(ArrhythmiaPattern):
             # Move to next beat
             current_time += rr_interval
     
-    def apply_to_ecg(self, ecg):
+    def apply_to_ecg(self, ecg, lead_name: Optional[str] = None):
         """Apply VT pattern to an ECG instance."""
-        super().apply_to_ecg(ecg)
+        super().apply_to_ecg(ecg, lead_name=lead_name)
         # Add some baseline wander to make it look more realistic
         time = ecg.time
         ecg.voltage += 0.1 * np.sin(2 * np.pi * 0.2 * time)  # 0.2 Hz wander

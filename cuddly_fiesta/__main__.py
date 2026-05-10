@@ -48,8 +48,8 @@ def _cmd_gui(_args: argparse.Namespace) -> None:
     Launches the Tk-based GUI interface.
     """
     try:
-        from .gui import ekg_ui
-        ekg_ui.main()
+        from .ecg_visualizer import run_visualizer
+        run_visualizer()
     except Exception as exc:
         import logging
         logging.exception("Tkinter GUI is unavailable:") # Log the full exception with traceback

@@ -5,11 +5,10 @@ ensuring a consistent interface for generating and applying different cardiac rh
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from .waveform_segment import WaveformSegment
-from .grid_scaling import GridScaling
 
 
 class ArrhythmiaPattern(ABC):
@@ -32,7 +31,7 @@ class ArrhythmiaPattern(ABC):
             lead_modifiers: Optional dictionary of lead-specific modifications
         """
         self.name = name
-        self.segments: List[Tuple[float, WaveformSegment]] = []
+        self.segments: List[Tuple[float, WaveformSegment, Optional[str]]] = []
         self.lead_modifiers = lead_modifiers or {}
     
     def add_segment(
@@ -48,11 +47,12 @@ class ArrhythmiaPattern(ABC):
             segment: WaveformSegment instance to add
             lead_name: Optional lead name if segment is lead-specific
         """
-        snapped = GridScaling.snap_to_grid_time(time_sec)
-        self.segments.append((snapped, segment, lead_name))
+        self.segments.append((time_sec, segment, lead_name))
 
     def apply_to_ecg(self, ecg, lead_name: Optional[str] = None) -> None:
         """Apply this pattern's segments to an ``ECGCore`` instance."""
+        if self.lead_modifiers:
+            ecg.lead_modifiers = self.lead_modifiers
         self.define_pattern()
         for start, segment, lead in self.segments:
             if 0 <= start < ecg.duration_sec:
