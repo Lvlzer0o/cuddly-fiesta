@@ -68,6 +68,63 @@ def _signal_ylim(signals: Iterable[np.ndarray]) -> Tuple[float, float]:
     return y_min - padding, y_max + padding
 
 
+def _remove_figure_axes(figure) -> None:
+    for ax in list(figure.axes):
+        ax.remove()
+    suptitle = getattr(figure, "_suptitle", None)
+    if suptitle is not None:
+        suptitle.remove()
+        figure._suptitle = None
+
+
+def _ensure_axes(figure, view_mode: str):
+    layout = getattr(figure, "_cuddly_layout", None)
+    if view_mode == "12-lead":
+        if layout != "12-lead" or len(figure.axes) != 12:
+            _remove_figure_axes(figure)
+            axes = figure.subplots(3, 4, sharex=True, sharey=True)
+            figure._cuddly_layout = "12-lead"
+            return axes
+        return np.asarray(figure.axes, dtype=object).reshape(3, 4)
+
+    if layout != "single" or len(figure.axes) != 1:
+        _remove_figure_axes(figure)
+        ax = figure.add_subplot(111)
+        figure._cuddly_layout = "single"
+        return ax
+    return figure.axes[0]
+
+
+def _set_trace(ax, time: np.ndarray, signal: np.ndarray, color: str, width: float):
+    if ax.lines:
+        line = ax.lines[0]
+        line.set_data(time, signal)
+        line.set_color(color)
+        line.set_linewidth(width)
+        for extra in ax.lines[1:]:
+            extra.remove()
+        return line
+    return ax.plot(time, signal, color=color, linewidth=width)[0]
+
+
+def _set_lead_label(ax, lead_name: str, color: str) -> None:
+    label = getattr(ax, "_cuddly_lead_label", None)
+    if label is None:
+        label = ax.text(
+            0.02,
+            0.86,
+            lead_name,
+            transform=ax.transAxes,
+            fontsize=10,
+            fontweight="bold",
+            color=color,
+        )
+        ax._cuddly_lead_label = label
+        return
+    label.set_text(lead_name)
+    label.set_color(color)
+
+
 def _style_ecg_axis(
     ax,
     duration_sec: float,
@@ -91,6 +148,8 @@ def _style_ecg_axis(
         ax.yaxis.set_minor_locator(MultipleLocator(1.0 / gain))
         ax.grid(which="major", color=ECG_GRID_MAJOR, linewidth=0.55)
         ax.grid(which="minor", color=ECG_GRID_MINOR, linewidth=0.35)
+    else:
+        ax.grid(False, which="both")
 
 
 def render_ecg_figure(
@@ -106,7 +165,6 @@ def render_ecg_figure(
     """Render an ECGCore as a clinical single-lead or 12-lead figure."""
     if figure is None:
         figure = plt.figure(figsize=(13, 8 if view_mode == "12-lead" else 4.5))
-    figure.clear()
     figure.patch.set_facecolor(ECG_PAPER)
 
     if multi is None:
@@ -117,7 +175,7 @@ def render_ecg_figure(
             for lead_name in LEAD_ORDER
         }
         y_limits = _signal_ylim(lead_signals.values())
-        axes = figure.subplots(3, 4, sharex=True, sharey=True)
+        axes = _ensure_axes(figure, "12-lead")
         for row_index, row in enumerate(CLINICAL_12_LEAD_LAYOUT):
             for col_index, lead_name in enumerate(row):
                 ax = axes[row_index][col_index]
@@ -125,21 +183,8 @@ def render_ecg_figure(
                     ECG_TRACE_FOCUS if lead_name == lead_focus else ECG_TRACE
                 )
                 line_width = 1.5 if lead_name == lead_focus else 0.9
-                ax.plot(
-                    ecg.time,
-                    lead_signals[lead_name],
-                    color=trace_color,
-                    linewidth=line_width,
-                )
-                ax.text(
-                    0.02,
-                    0.86,
-                    lead_name,
-                    transform=ax.transAxes,
-                    fontsize=10,
-                    fontweight="bold",
-                    color=trace_color,
-                )
+                _set_trace(ax, ecg.time, lead_signals[lead_name], trace_color, line_width)
+                _set_lead_label(ax, lead_name, trace_color)
                 _style_ecg_axis(
                     ax, ecg.duration_sec, gain, paper_speed, show_grid
                 )
@@ -154,13 +199,8 @@ def render_ecg_figure(
 
     lead_name = lead_focus if lead_focus in LEAD_ORDER else "II"
     signal = _scaled_signal(multi.get_lead(lead_name), gain)
-    ax = figure.add_subplot(111)
-    ax.plot(
-        ecg.time,
-        signal,
-        color=ECG_TRACE_FOCUS,
-        linewidth=1.2,
-    )
+    ax = _ensure_axes(figure, "single")
+    _set_trace(ax, ecg.time, signal, ECG_TRACE_FOCUS, 1.2)
     _style_ecg_axis(ax, ecg.duration_sec, gain, paper_speed, show_grid)
     ax.set_ylim(*_signal_ylim((signal,)))
     ax.set_xlabel("Time (s)")

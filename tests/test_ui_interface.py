@@ -156,6 +156,28 @@ class TestClinicalRendering(unittest.TestCase):
         synth.assert_not_called()
         plt.close(figure)
 
+    def test_render_reuses_single_lead_axes_and_line(self):
+        from cuddly_fiesta.ecg_visualizer import render_ecg_figure
+
+        ecg = ECGCore(duration_sec=1, sampling_rate=100)
+        ecg.time = np.linspace(0, 1, 100, endpoint=False)
+        ecg.voltage = np.sin(ecg.time)
+        multi = MultiLeadECG(ecg)
+        figure, ax = render_ecg_figure(
+            ecg, view_mode="single", lead_focus="II", multi=multi
+        )
+        line = ax.lines[0]
+
+        with patch.object(figure, "clear", wraps=figure.clear) as clear:
+            _, next_ax = render_ecg_figure(
+                ecg, view_mode="single", lead_focus="II", figure=figure, multi=multi
+            )
+
+        clear.assert_not_called()
+        self.assertIs(next_ax, ax)
+        self.assertIs(next_ax.lines[0], line)
+        plt.close(figure)
+
     def test_render_uses_dynamic_y_limits_for_high_gain_signals(self):
         from cuddly_fiesta.ecg_visualizer import render_ecg_figure
 
