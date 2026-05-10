@@ -18,6 +18,7 @@ from .ui_registry import (
     DURATION,
     RHYTHM_REGISTRY,
     ParameterSpec,
+    TARGET_FPS_OPTIONS,
     create_rhythm,
 )
 
@@ -272,6 +273,7 @@ class ECGVisualizer:
         self.gain_var = tk.DoubleVar(value=10.0)
         self.paper_speed_var = tk.DoubleVar(value=25.0)
         self.speed_var = tk.DoubleVar(value=1.0)
+        self.target_fps_var = tk.StringVar(value="60")
         self.status_var = tk.StringVar(value="Ready")
 
         self._setup_style()
@@ -364,6 +366,13 @@ class ECGVisualizer:
             4,
             0.25,
             "x",
+            None,
+        )
+        self._add_choice(
+            display_frame,
+            "Target FPS",
+            self.target_fps_var,
+            TARGET_FPS_OPTIONS,
             None,
         )
 
@@ -542,12 +551,32 @@ class ECGVisualizer:
         self.is_playing = True
         self._animate_once()
 
+    def _target_fps(self) -> int:
+        try:
+            fps = int(float(self.target_fps_var.get()))
+        except (tk.TclError, TypeError, ValueError):
+            return 60
+        if str(fps) not in TARGET_FPS_OPTIONS:
+            return 60
+        return fps
+
+    def _animation_timing(self) -> Tuple[int, int]:
+        try:
+            playback_speed = float(self.speed_var.get())
+        except (tk.TclError, TypeError, ValueError):
+            playback_speed = 1.0
+        playback_speed = max(0.01, playback_speed)
+        target_fps = self._target_fps()
+        step = max(1, int(round(self.sampling_rate * playback_speed / target_fps)))
+        delay = max(1, int(round(1000.0 / target_fps)))
+        return step, delay
+
     def _animate_once(self) -> None:
         if not self.is_playing or self.current_ecg is None:
             return
         duration = self.current_ecg.duration_sec
         window = max(1.0, min(6.0, duration))
-        step = max(1, int(40 * float(self.speed_var.get())))
+        step, delay = self._animation_timing()
         self.frame_index = (self.frame_index + step) % len(self.current_ecg.time)
         start_sec = self.frame_index / self.sampling_rate
 
@@ -567,7 +596,6 @@ class ECGVisualizer:
         ax = self.figure.axes[0]
         ax.set_xlim(start_sec, min(duration, start_sec + window))
         self.canvas.draw_idle()
-        delay = max(30, int(120 / float(self.speed_var.get())))
         self.animation_timer = self.master.after(delay, self._animate_once)
 
     def reset(self) -> None:
