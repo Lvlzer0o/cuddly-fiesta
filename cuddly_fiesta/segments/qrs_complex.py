@@ -46,8 +46,9 @@ class QRSComplex(WaveformSegment):
             ValueError: If parameters are outside clinical ranges
         """
         # Parameter checks omitted for this lightweight test implementation
-        q_amplitude_mv = -abs(r_amplitude_mv) * q_ratio
-        s_amplitude_mv = -abs(r_amplitude_mv) * s_ratio
+        polarity = 1.0 if r_amplitude_mv >= 0 else -1.0
+        q_amplitude_mv = -polarity * abs(r_amplitude_mv) * q_ratio
+        s_amplitude_mv = -polarity * abs(r_amplitude_mv) * s_ratio
 
         super().__init__(duration_ms, r_amplitude_mv)
         self.q_duration_ms = q_duration_ms
@@ -112,13 +113,19 @@ class QRSComplex(WaveformSegment):
 
         r_start = int(0.3 * len(t))
         end = min(r_start + len(r_wave), len(qrs))
-        qrs[r_start:end] = np.maximum(qrs[r_start:end], r_wave[:end-r_start])
+        if self.r_amplitude_mv >= 0:
+            qrs[r_start:end] = np.maximum(qrs[r_start:end], r_wave[:end-r_start])
+        else:
+            qrs[r_start:end] = np.minimum(qrs[r_start:end], r_wave[:end-r_start])
         
         # S wave (negative after R)
         s_wave_len = self._ms_to_samples(self.s_duration_ms, sampling_rate)
         s_wave = self._generate_wave(s_wave_len, self.s_amplitude_mv, wave_type="gaussian")
         s_start = int(0.6 * len(t))
         end = min(s_start + len(s_wave), len(qrs))
-        qrs[s_start:end] = np.minimum(qrs[s_start:end], s_wave[:end - s_start])
+        if self.s_amplitude_mv <= 0:
+            qrs[s_start:end] = np.minimum(qrs[s_start:end], s_wave[:end - s_start])
+        else:
+            qrs[s_start:end] = np.maximum(qrs[s_start:end], s_wave[:end - s_start])
 
         return t, qrs.astype(np.float32)

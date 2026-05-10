@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 
 from ..core import ArrhythmiaPattern, ECGCore
@@ -12,11 +14,17 @@ class Asystole(ArrhythmiaPattern):
 
     def __init__(self, **kwargs):
         """Initializes the Asystole pattern."""
-        super().__init__(**kwargs)
+        super().__init__("Asystole", **kwargs)
         # Asystole has no heart rate.
         self.heart_rate_bpm = 0
 
-    def apply_to_ecg(self, ecg: ECGCore) -> None:
+    def define_pattern(self) -> None:
+        """Asystole has no waveform events."""
+        self.segments = []
+
+    def apply_to_ecg(
+        self, ecg: ECGCore, lead_name: Optional[str] = None
+    ) -> None:
         """
         Applies the Asystole pattern to the ECG data.
 
@@ -25,7 +33,11 @@ class Asystole(ArrhythmiaPattern):
 
         Args:
             ecg: The ECGCore object to modify.
+            lead_name: Ignored; asystole is a signal-wide flatline.
         """
-        # Generate a flatline signal
-        ecg.signal = np.zeros_like(ecg.time)
-        ecg.segments_added = []  # No segments in asystole
+        ecg.voltage = np.zeros_like(ecg.time)
+        if hasattr(ecg, "events"):
+            ecg.events.clear()
+            ecg.segments_added = ecg.events
+        else:
+            ecg.segments_added = []
