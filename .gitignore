@@ -1,6 +1,9 @@
 # Python artifacts
 *.pyc
 __pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
 *.egg-info/
 
 # Virtual environments
@@ -15,13 +18,18 @@ ENV/
 # Output directories
 output/
 outputs/
+plots/
 build/
 dist/
 
 # Local/editor metadata
 .idea/
+.vscode/
+.DS_Store
+Thumbs.db
 
 # Generated analysis and bundle artifacts
+*.log
 *.sarif
 *.sarif.json
 *.pyz

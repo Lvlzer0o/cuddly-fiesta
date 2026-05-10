@@ -8,6 +8,9 @@ venv/
 env/
 ENV/
 __pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
 *.pyc
 *.pyo
 *.egg-info/
@@ -15,6 +18,11 @@ build/
 dist/
 output/
 outputs/
+plots/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
 *.sarif
 *.sarif.json
 *.pyz

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 from typing import Any, Dict, Mapping, Optional, Tuple, Type
 
 from .core import ArrhythmiaPattern
@@ -216,7 +217,20 @@ def coerce_parameter_value(param: ParameterSpec, value: Any) -> Any:
             raise ValueError(f"{param.name} must be one of {param.options}")
         return str(value)
     if param.kind == "bool":
-        return bool(value)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes"}:
+                return True
+            if normalized in {"false", "0", "no"}:
+                return False
+        if isinstance(value, Real):
+            if value == 1:
+                return True
+            if value == 0:
+                return False
+        raise ValueError(f"{param.name} must be a boolean value")
     if param.kind == "int":
         return int(float(value))
     if param.kind == "float":

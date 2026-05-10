@@ -112,6 +112,8 @@ ecg-multilead-demo
 ## Python Usage
 
 ```python
+from pathlib import Path
+
 from cuddly_fiesta import ECGCore, MultiLeadECG, NormalSinusRhythm
 
 ecg = ECGCore(duration_sec=5, sampling_rate=1000)
@@ -119,7 +121,8 @@ NormalSinusRhythm(heart_rate_bpm=70, rng_seed=1).apply_to_ecg(ecg)
 
 multi = MultiLeadECG.from_ecg(ecg)
 fig, _axes = multi.plot_all_leads(with_grid=True)
-fig.savefig("example_12_lead.png", dpi=150, bbox_inches="tight")
+Path("plots").mkdir(exist_ok=True)
+fig.savefig("plots/example_12_lead.png", dpi=150, bbox_inches="tight")
 ```
 
 For lower-level composition, create waveform segment instances and add them to

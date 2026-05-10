@@ -61,6 +61,45 @@ class TestRhythmRegistry(unittest.TestCase):
         self.assertEqual(controls["target_fps"].default, "60")
         self.assertEqual(controls["target_fps"].options, ("24", "30", "60", "120"))
 
+    def test_show_grid_coercion_accepts_common_bool_inputs(self):
+        from cuddly_fiesta.ui_registry import DISPLAY_CONTROL_SPECS, coerce_parameter_value
+
+        show_grid = next(
+            control for control in DISPLAY_CONTROL_SPECS if control.name == "show_grid"
+        )
+        cases = (
+            (True, True),
+            (False, False),
+            ("true", True),
+            ("false", False),
+            (" TRUE ", True),
+            (" False ", False),
+            ("1", True),
+            ("0", False),
+            (1, True),
+            (0, False),
+            (1.0, True),
+            (0.0, False),
+            ("yes", True),
+            ("no", False),
+        )
+
+        for raw_value, expected in cases:
+            with self.subTest(raw_value=raw_value):
+                self.assertIs(coerce_parameter_value(show_grid, raw_value), expected)
+
+    def test_show_grid_coercion_rejects_ambiguous_bool_inputs(self):
+        from cuddly_fiesta.ui_registry import DISPLAY_CONTROL_SPECS, coerce_parameter_value
+
+        show_grid = next(
+            control for control in DISPLAY_CONTROL_SPECS if control.name == "show_grid"
+        )
+
+        for raw_value in ("", "maybe", "2", 2, -1, None):
+            with self.subTest(raw_value=raw_value):
+                with self.assertRaises(ValueError):
+                    coerce_parameter_value(show_grid, raw_value)
+
     def test_registry_instantiates_rhythms_with_supported_parameters(self):
         from cuddly_fiesta.ui_registry import create_rhythm
 
