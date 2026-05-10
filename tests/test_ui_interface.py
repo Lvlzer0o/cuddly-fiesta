@@ -284,6 +284,90 @@ class TestClinicalRendering(unittest.TestCase):
                 viz.target_fps_var = DummyVar(fps)
                 self.assertEqual(viz._animation_timing(), timing)
 
+    def test_playback_status_text_reports_visible_runtime_state(self):
+        from cuddly_fiesta.ecg_visualizer import ECGVisualizer
+
+        class DummyVar:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+        viz = ECGVisualizer.__new__(ECGVisualizer)
+        viz.current_rhythm_name = "Normal Sinus Rhythm"
+        viz.current_duration_sec = 10.0
+        viz.is_playing = False
+        viz._plot_state = ("single", "II", True, 10.0, 25.0)
+        viz.view_mode_var = DummyVar("12-lead")
+        viz.lead_focus_var = DummyVar("II")
+        viz.speed_var = DummyVar(1.5)
+        viz.target_fps_var = DummyVar("120")
+
+        status = viz._status_text()
+
+        self.assertIn("Normal Sinus Rhythm", status)
+        self.assertIn("10s", status)
+        self.assertIn("Stopped", status)
+        self.assertIn("single", status)
+        self.assertNotIn("12-lead", status)
+        self.assertIn("Lead II", status)
+        self.assertIn("1.5x", status)
+        self.assertIn("120 FPS", status)
+
+        viz.speed_var = DummyVar("editing")
+        self.assertIn("1x", viz._status_text())
+
+    def test_toggle_play_updates_button_label_and_status(self):
+        from cuddly_fiesta.ecg_visualizer import ECGVisualizer
+
+        class DummyVar:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+            def set(self, value):
+                self.value = value
+
+        class DummyMaster:
+            def __init__(self):
+                self.cancelled = []
+
+            def after_cancel(self, timer):
+                self.cancelled.append(timer)
+
+        viz = ECGVisualizer.__new__(ECGVisualizer)
+        viz.master = DummyMaster()
+        viz.animation_timer = None
+        viz.is_playing = False
+        viz.play_button_var = DummyVar("Play")
+        viz.status_var = DummyVar("")
+        viz.current_rhythm_name = "Normal Sinus Rhythm"
+        viz.current_duration_sec = 10.0
+        viz.view_mode_var = DummyVar("single")
+        viz.lead_focus_var = DummyVar("II")
+        viz.speed_var = DummyVar(1.0)
+        viz.target_fps_var = DummyVar("60")
+
+        with patch.object(viz, "_animate_once") as animate_once:
+            viz.toggle_play()
+
+        animate_once.assert_called_once_with()
+        self.assertTrue(viz.is_playing)
+        self.assertEqual(viz.play_button_var.get(), "Pause")
+        self.assertIn("Playing", viz.status_var.get())
+
+        viz.animation_timer = "timer"
+        viz.toggle_play()
+
+        self.assertFalse(viz.is_playing)
+        self.assertIsNone(viz.animation_timer)
+        self.assertEqual(viz.play_button_var.get(), "Play")
+        self.assertEqual(viz.master.cancelled, ["timer"])
+        self.assertIn("Stopped", viz.status_var.get())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -70,6 +70,20 @@ python -m cuddly_fiesta animate --multi
 python -m cuddly_fiesta gui
 ```
 
+## GUI Controls
+
+The Tk GUI provides a single clinical workstation-style entry point:
+
+- Rhythm selection and rhythm-specific parameters.
+- Single-lead and 12-lead display modes with lead focus.
+- ECG grid, gain, and paper speed controls.
+- Playback speed plus target FPS presets for 24, 30, 60, or 120 FPS.
+- Image and CSV export from the current synthetic ECG.
+
+The playback status line reports the current rhythm, duration, playback state,
+view mode, lead, speed, and target FPS. Use lower FPS targets for older systems
+and higher targets when the machine can sustain smoother redraws.
+
 Installed console scripts:
 
 ```bash
