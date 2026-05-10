@@ -55,6 +55,19 @@ def _scaled_signal(signal: np.ndarray, gain: float) -> np.ndarray:
     return signal * (gain / 10.0)
 
 
+def _signal_ylim(signals: Iterable[np.ndarray]) -> Tuple[float, float]:
+    populated = [np.asarray(signal) for signal in signals if np.asarray(signal).size]
+    if not populated:
+        return -2.5, 2.5
+
+    values = np.concatenate(populated)
+    y_min = float(np.min(values))
+    y_max = float(np.max(values))
+    span = max(y_max - y_min, 1.0)
+    padding = max(span * 0.1, 0.2)
+    return y_min - padding, y_max + padding
+
+
 def _style_ecg_axis(
     ax,
     duration_sec: float,
@@ -88,6 +101,7 @@ def render_ecg_figure(
     gain: float = 10,
     paper_speed: float = 25,
     figure=None,
+    multi: Optional[MultiLeadECG] = None,
 ):
     """Render an ECGCore as a clinical single-lead or 12-lead figure."""
     if figure is None:
@@ -95,8 +109,14 @@ def render_ecg_figure(
     figure.clear()
     figure.patch.set_facecolor(ECG_PAPER)
 
-    multi = MultiLeadECG.from_ecg(ecg)
+    if multi is None:
+        multi = MultiLeadECG.from_ecg(ecg)
     if view_mode == "12-lead":
+        lead_signals = {
+            lead_name: _scaled_signal(multi.get_lead(lead_name), gain)
+            for lead_name in LEAD_ORDER
+        }
+        y_limits = _signal_ylim(lead_signals.values())
         axes = figure.subplots(3, 4, sharex=True, sharey=True)
         for row_index, row in enumerate(CLINICAL_12_LEAD_LAYOUT):
             for col_index, lead_name in enumerate(row):
@@ -107,7 +127,7 @@ def render_ecg_figure(
                 line_width = 1.5 if lead_name == lead_focus else 0.9
                 ax.plot(
                     ecg.time,
-                    _scaled_signal(multi.get_lead(lead_name), gain),
+                    lead_signals[lead_name],
                     color=trace_color,
                     linewidth=line_width,
                 )
@@ -123,7 +143,7 @@ def render_ecg_figure(
                 _style_ecg_axis(
                     ax, ecg.duration_sec, gain, paper_speed, show_grid
                 )
-                ax.set_ylim(-2.5, 2.5)
+                ax.set_ylim(*y_limits)
         figure.suptitle(
             f"12-lead ECG | {paper_speed:g} mm/s | {gain:g} mm/mV",
             fontsize=12,
@@ -133,15 +153,16 @@ def render_ecg_figure(
         return figure, axes
 
     lead_name = lead_focus if lead_focus in LEAD_ORDER else "II"
+    signal = _scaled_signal(multi.get_lead(lead_name), gain)
     ax = figure.add_subplot(111)
     ax.plot(
         ecg.time,
-        _scaled_signal(multi.get_lead(lead_name), gain),
+        signal,
         color=ECG_TRACE_FOCUS,
         linewidth=1.2,
     )
     _style_ecg_axis(ax, ecg.duration_sec, gain, paper_speed, show_grid)
-    ax.set_ylim(-2.5, 2.5)
+    ax.set_ylim(*_signal_ylim((signal,)))
     ax.set_xlabel("Time (s)")
     ax.set_title(
         f"Lead {lead_name} | {paper_speed:g} mm/s | {gain:g} mm/mV",
@@ -191,9 +212,11 @@ class ECGVisualizer:
 
         self.sampling_rate = 1000
         self.current_ecg: Optional[ECGCore] = None
+        self.current_multi: Optional[MultiLeadECG] = None
         self.animation_timer = None
         self.is_playing = False
         self.frame_index = 0
+        self._plot_state: Optional[Tuple[str, str, bool, float, float]] = None
 
         self.rhythm_label_to_key = {
             spec.label: key for key, spec in RHYTHM_REGISTRY.items()
@@ -433,6 +456,7 @@ class ECGVisualizer:
             ecg = ECGCore(duration_sec=duration_sec, sampling_rate=self.sampling_rate)
             rhythm.apply_to_ecg(ecg)
             self.current_ecg = ecg
+            self.current_multi = MultiLeadECG.from_ecg(ecg)
             self.frame_index = 0
             self.status_var.set(f"{rhythm.name} | {duration_sec:g} seconds")
             self.update_plot()
@@ -443,16 +467,30 @@ class ECGVisualizer:
     def update_plot(self) -> None:
         if self.current_ecg is None:
             return
+        state = self._requested_plot_state(self.view_mode_var.get())
         render_ecg_figure(
             self.current_ecg,
-            view_mode=self.view_mode_var.get(),
-            lead_focus=self.lead_focus_var.get(),
-            show_grid=self.show_grid_var.get(),
-            gain=float(self.gain_var.get()),
-            paper_speed=float(self.paper_speed_var.get()),
+            view_mode=state[0],
+            lead_focus=state[1],
+            show_grid=state[2],
+            gain=state[3],
+            paper_speed=state[4],
             figure=self.figure,
+            multi=self.current_multi,
         )
+        self._plot_state = state
         self.canvas.draw_idle()
+
+    def _requested_plot_state(
+        self, view_mode: str
+    ) -> Tuple[str, str, bool, float, float]:
+        return (
+            view_mode,
+            self.lead_focus_var.get(),
+            bool(self.show_grid_var.get()),
+            float(self.gain_var.get()),
+            float(self.paper_speed_var.get()),
+        )
 
     def toggle_play(self) -> None:
         if self.is_playing:
@@ -473,15 +511,19 @@ class ECGVisualizer:
         self.frame_index = (self.frame_index + step) % len(self.current_ecg.time)
         start_sec = self.frame_index / self.sampling_rate
 
-        render_ecg_figure(
-            self.current_ecg,
-            view_mode="single",
-            lead_focus=self.lead_focus_var.get(),
-            show_grid=self.show_grid_var.get(),
-            gain=float(self.gain_var.get()),
-            paper_speed=float(self.paper_speed_var.get()),
-            figure=self.figure,
-        )
+        state = self._requested_plot_state("single")
+        if self._plot_state != state or not self.figure.axes:
+            render_ecg_figure(
+                self.current_ecg,
+                view_mode=state[0],
+                lead_focus=state[1],
+                show_grid=state[2],
+                gain=state[3],
+                paper_speed=state[4],
+                figure=self.figure,
+                multi=self.current_multi,
+            )
+            self._plot_state = state
         ax = self.figure.axes[0]
         ax.set_xlim(start_sec, min(duration, start_sec + window))
         self.canvas.draw_idle()

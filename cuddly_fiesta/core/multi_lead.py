@@ -54,6 +54,10 @@ BUNDLE_BRANCH_BLOCK_TEMPLATE_LEADS = {
 }
 
 
+def _narrow_gaussian(x: np.ndarray, center: float, width: float) -> np.ndarray:
+    return np.exp(-0.5 * ((x - center) / width) ** 2)
+
+
 class MultiLeadECG:
     """Generate a simple 12-lead ECG from an ``ECGCore`` instance."""
 
@@ -193,28 +197,25 @@ class MultiLeadECG:
         x = np.linspace(0.0, 1.0, default_signal.size, endpoint=False)
         amplitude = max(float(np.max(np.abs(default_signal))), 0.1)
 
-        def narrow(center: float, width: float) -> np.ndarray:
-            return np.exp(-0.5 * ((x - center) / width) ** 2)
-
         if profile == "rbbb":
             if lead_name in ("V1", "V2"):
                 return amplitude * (
-                    0.35 * narrow(0.28, 0.08)
-                    + 1.15 * narrow(0.76, 0.10)
+                    0.35 * _narrow_gaussian(x, 0.28, 0.08)
+                    + 1.15 * _narrow_gaussian(x, 0.76, 0.10)
                 )
             if lead_name in ("I", "V5", "V6"):
                 return amplitude * (
-                    0.8 * narrow(0.32, 0.10)
-                    - 0.75 * narrow(0.76, 0.11)
+                    0.8 * _narrow_gaussian(x, 0.32, 0.10)
+                    - 0.75 * _narrow_gaussian(x, 0.76, 0.11)
                 )
             return default_signal
 
         if lead_name in ("V1", "V2"):
-            return -amplitude * (1.1 * narrow(0.52, 0.22))
+            return -amplitude * (1.1 * _narrow_gaussian(x, 0.52, 0.22))
         if lead_name in ("I", "aVL", "V5", "V6"):
             return amplitude * (
-                1.05 * narrow(0.50, 0.20)
-                + 0.45 * narrow(0.76, 0.16)
+                1.05 * _narrow_gaussian(x, 0.50, 0.20)
+                + 0.45 * _narrow_gaussian(x, 0.76, 0.16)
             )
         return default_signal
 

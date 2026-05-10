@@ -4,10 +4,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from cuddly_fiesta.ecg_core import ECGCore
+from cuddly_fiesta.core import MultiLeadECG
 from cuddly_fiesta.rhythms import BundleBranchBlock, NormalSinusRhythm
 
 
@@ -137,6 +140,97 @@ class TestUIEntrypoints(unittest.TestCase):
             self.assertGreater(image_path.stat().st_size, 0)
             header = csv_path.read_text().splitlines()[0]
             self.assertEqual(header, "time,I,II,III,aVR,aVL,aVF,V1,V2,V3,V4,V5,V6")
+
+
+class TestClinicalRendering(unittest.TestCase):
+    def test_render_uses_cached_multi_lead_when_supplied(self):
+        from cuddly_fiesta.ecg_visualizer import render_ecg_figure
+
+        ecg = ECGCore(duration_sec=1, sampling_rate=1000)
+        NormalSinusRhythm(heart_rate_bpm=60, duration_sec=1).apply_to_ecg(ecg)
+        multi = MultiLeadECG.from_ecg(ecg)
+
+        with patch("cuddly_fiesta.ecg_visualizer.MultiLeadECG.from_ecg") as synth:
+            figure, _ = render_ecg_figure(ecg, lead_focus="II", multi=multi)
+
+        synth.assert_not_called()
+        plt.close(figure)
+
+    def test_render_uses_dynamic_y_limits_for_high_gain_signals(self):
+        from cuddly_fiesta.ecg_visualizer import render_ecg_figure
+
+        ecg = ECGCore(duration_sec=1, sampling_rate=100)
+        ecg.time = np.linspace(0, 1, 100, endpoint=False)
+        signal = np.linspace(-4.0, 4.0, ecg.time.size)
+        ecg.voltage = signal / 1.5
+        multi = MultiLeadECG(ecg)
+
+        figure, ax = render_ecg_figure(
+            ecg,
+            view_mode="single",
+            lead_focus="II",
+            gain=20,
+            multi=multi,
+        )
+
+        y_min, y_max = ax.get_ylim()
+        plotted = ax.lines[0].get_ydata()
+        self.assertLessEqual(y_min, float(np.min(plotted)))
+        self.assertGreaterEqual(y_max, float(np.max(plotted)))
+        plt.close(figure)
+
+    def test_animation_reuses_existing_single_lead_plot(self):
+        from cuddly_fiesta.ecg_visualizer import ECGVisualizer
+
+        class DummyVar:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+        class DummyCanvas:
+            def __init__(self):
+                self.draws = 0
+
+            def draw_idle(self):
+                self.draws += 1
+
+        class DummyMaster:
+            def __init__(self):
+                self.scheduled = []
+
+            def after(self, delay, callback):
+                self.scheduled.append((delay, callback))
+                return "timer"
+
+        ecg = ECGCore(duration_sec=1, sampling_rate=100)
+        ecg.time = np.linspace(0, 1, 100, endpoint=False)
+        ecg.voltage = np.sin(ecg.time)
+        viz = ECGVisualizer.__new__(ECGVisualizer)
+        viz.is_playing = True
+        viz.current_ecg = ecg
+        viz.current_multi = MultiLeadECG(ecg)
+        viz.frame_index = 0
+        viz.sampling_rate = 100
+        viz.speed_var = DummyVar(1.0)
+        viz.lead_focus_var = DummyVar("II")
+        viz.show_grid_var = DummyVar(True)
+        viz.gain_var = DummyVar(10.0)
+        viz.paper_speed_var = DummyVar(25.0)
+        viz.figure = plt.Figure()
+        viz.figure.add_subplot(111)
+        viz.canvas = DummyCanvas()
+        viz.master = DummyMaster()
+        viz._plot_state = ("single", "II", True, 10.0, 25.0)
+
+        with patch("cuddly_fiesta.ecg_visualizer.render_ecg_figure") as render:
+            viz._animate_once()
+
+        render.assert_not_called()
+        self.assertEqual(viz.canvas.draws, 1)
+        self.assertEqual(len(viz.master.scheduled), 1)
+        plt.close(viz.figure)
 
 
 if __name__ == "__main__":
