@@ -52,10 +52,14 @@ class TestRhythmRegistry(unittest.TestCase):
                 "gain",
                 "paper_speed",
                 "speed",
+                "target_fps",
                 "export_image",
                 "export_csv",
             }.issubset(display_controls)
         )
+        controls = {control.name: control for control in DISPLAY_CONTROL_SPECS}
+        self.assertEqual(controls["target_fps"].default, "60")
+        self.assertEqual(controls["target_fps"].options, ("24", "30", "60", "120"))
 
     def test_registry_instantiates_rhythms_with_supported_parameters(self):
         from cuddly_fiesta.ui_registry import create_rhythm
@@ -240,6 +244,7 @@ class TestClinicalRendering(unittest.TestCase):
         viz.show_grid_var = DummyVar(True)
         viz.gain_var = DummyVar(10.0)
         viz.paper_speed_var = DummyVar(25.0)
+        viz.target_fps_var = DummyVar("60")
         viz.figure = plt.Figure()
         viz.figure.add_subplot(111)
         viz.canvas = DummyCanvas()
@@ -252,7 +257,32 @@ class TestClinicalRendering(unittest.TestCase):
         render.assert_not_called()
         self.assertEqual(viz.canvas.draws, 1)
         self.assertEqual(len(viz.master.scheduled), 1)
+        self.assertEqual(viz.master.scheduled[0][0], 17)
         plt.close(viz.figure)
+
+    def test_animation_timing_uses_target_fps(self):
+        from cuddly_fiesta.ecg_visualizer import ECGVisualizer
+
+        class DummyVar:
+            def __init__(self, value):
+                self.value = value
+
+            def get(self):
+                return self.value
+
+        expected = {
+            "24": (42, 42),
+            "30": (33, 33),
+            "60": (17, 17),
+            "120": (8, 8),
+        }
+        for fps, timing in expected.items():
+            with self.subTest(fps=fps):
+                viz = ECGVisualizer.__new__(ECGVisualizer)
+                viz.sampling_rate = 1000
+                viz.speed_var = DummyVar(1.0)
+                viz.target_fps_var = DummyVar(fps)
+                self.assertEqual(viz._animation_timing(), timing)
 
 
 if __name__ == "__main__":

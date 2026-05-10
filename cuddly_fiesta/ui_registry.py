@@ -59,6 +59,7 @@ HEART_RATE = ParameterSpec(
 DURATION = ParameterSpec(
     "duration_sec", "Duration", 10, "float", 1, 30, 1, "s"
 )
+TARGET_FPS_OPTIONS = ("24", "30", "60", "120")
 
 
 RHYTHM_REGISTRY: Dict[str, RhythmSpec] = {
@@ -202,6 +203,7 @@ DISPLAY_CONTROL_SPECS: Tuple[ParameterSpec, ...] = (
     ParameterSpec("gain", "Gain", 10, "float", 5, 20, 1, "mm/mV"),
     ParameterSpec("paper_speed", "Paper speed", 25, "float", 12.5, 50, 12.5, "mm/s"),
     ParameterSpec("speed", "Playback speed", 1.0, "float", 0.25, 4.0, 0.25, "x"),
+    ParameterSpec("target_fps", "Target FPS", "60", "choice", options=TARGET_FPS_OPTIONS),
     ParameterSpec("export_image", "Export image", "png", "command"),
     ParameterSpec("export_csv", "Export CSV", "csv", "command"),
 )
