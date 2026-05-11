@@ -14,6 +14,17 @@ from cuddly_fiesta.core import MultiLeadECG
 from cuddly_fiesta.rhythms import BundleBranchBlock, NormalSinusRhythm
 
 
+class _DummyVar:
+    def __init__(self, value):
+        self.value = value
+
+    def get(self):
+        return self.value
+
+    def set(self, value):
+        self.value = value
+
+
 class TestRhythmRegistry(unittest.TestCase):
     def test_registry_covers_public_ui_rhythms_and_parameters(self):
         from cuddly_fiesta.ui_registry import DISPLAY_CONTROL_SPECS, RHYTHM_REGISTRY
@@ -247,13 +258,6 @@ class TestClinicalRendering(unittest.TestCase):
     def test_animation_reuses_existing_single_lead_plot(self):
         from cuddly_fiesta.ecg_visualizer import ECGVisualizer
 
-        class DummyVar:
-            def __init__(self, value):
-                self.value = value
-
-            def get(self):
-                return self.value
-
         class DummyCanvas:
             def __init__(self):
                 self.draws = 0
@@ -278,12 +282,12 @@ class TestClinicalRendering(unittest.TestCase):
         viz.current_multi = MultiLeadECG(ecg)
         viz.frame_index = 0
         viz.sampling_rate = 100
-        viz.speed_var = DummyVar(1.0)
-        viz.lead_focus_var = DummyVar("II")
-        viz.show_grid_var = DummyVar(True)
-        viz.gain_var = DummyVar(10.0)
-        viz.paper_speed_var = DummyVar(25.0)
-        viz.target_fps_var = DummyVar("60")
+        viz.speed_var = _DummyVar(1.0)
+        viz.lead_focus_var = _DummyVar("II")
+        viz.show_grid_var = _DummyVar(True)
+        viz.gain_var = _DummyVar(10.0)
+        viz.paper_speed_var = _DummyVar(25.0)
+        viz.target_fps_var = _DummyVar("60")
         viz.figure = plt.Figure()
         viz.figure.add_subplot(111)
         viz.canvas = DummyCanvas()
@@ -302,13 +306,6 @@ class TestClinicalRendering(unittest.TestCase):
     def test_animation_timing_uses_target_fps(self):
         from cuddly_fiesta.ecg_visualizer import ECGVisualizer
 
-        class DummyVar:
-            def __init__(self, value):
-                self.value = value
-
-            def get(self):
-                return self.value
-
         expected = {
             "24": (42, 42),
             "30": (33, 33),
@@ -319,35 +316,28 @@ class TestClinicalRendering(unittest.TestCase):
             with self.subTest(fps=fps):
                 viz = ECGVisualizer.__new__(ECGVisualizer)
                 viz.sampling_rate = 1000
-                viz.speed_var = DummyVar(1.0)
-                viz.target_fps_var = DummyVar(fps)
+                viz.speed_var = _DummyVar(1.0)
+                viz.target_fps_var = _DummyVar(fps)
                 self.assertEqual(viz._animation_timing(), timing)
 
         viz = ECGVisualizer.__new__(ECGVisualizer)
         viz.sampling_rate = 1000
-        viz.speed_var = DummyVar(2.0)
-        viz.target_fps_var = DummyVar("120")
+        viz.speed_var = _DummyVar(2.0)
+        viz.target_fps_var = _DummyVar("120")
         self.assertEqual(viz._animation_timing(), (16, 8))
 
     def test_playback_status_text_reports_visible_runtime_state(self):
         from cuddly_fiesta.ecg_visualizer import ECGVisualizer
-
-        class DummyVar:
-            def __init__(self, value):
-                self.value = value
-
-            def get(self):
-                return self.value
 
         viz = ECGVisualizer.__new__(ECGVisualizer)
         viz.current_rhythm_name = "Normal Sinus Rhythm"
         viz.current_duration_sec = 10.0
         viz.is_playing = False
         viz._plot_state = ("single", "II", True, 10.0, 25.0)
-        viz.view_mode_var = DummyVar("12-lead")
-        viz.lead_focus_var = DummyVar("II")
-        viz.speed_var = DummyVar(1.5)
-        viz.target_fps_var = DummyVar("120")
+        viz.view_mode_var = _DummyVar("12-lead")
+        viz.lead_focus_var = _DummyVar("II")
+        viz.speed_var = _DummyVar(1.5)
+        viz.target_fps_var = _DummyVar("120")
 
         status = viz._status_text()
 
@@ -360,21 +350,11 @@ class TestClinicalRendering(unittest.TestCase):
         self.assertIn("1.5x", status)
         self.assertIn("120 FPS", status)
 
-        viz.speed_var = DummyVar("editing")
+        viz.speed_var = _DummyVar("editing")
         self.assertIn("1x", viz._status_text())
 
     def test_toggle_play_updates_button_label_and_status(self):
         from cuddly_fiesta.ecg_visualizer import ECGVisualizer
-
-        class DummyVar:
-            def __init__(self, value):
-                self.value = value
-
-            def get(self):
-                return self.value
-
-            def set(self, value):
-                self.value = value
 
         class DummyMaster:
             def __init__(self):
@@ -387,14 +367,14 @@ class TestClinicalRendering(unittest.TestCase):
         viz.master = DummyMaster()
         viz.animation_timer = None
         viz.is_playing = False
-        viz.play_button_var = DummyVar("Play")
-        viz.status_var = DummyVar("")
+        viz.play_button_var = _DummyVar("Play")
+        viz.status_var = _DummyVar("")
         viz.current_rhythm_name = "Normal Sinus Rhythm"
         viz.current_duration_sec = 10.0
-        viz.view_mode_var = DummyVar("single")
-        viz.lead_focus_var = DummyVar("II")
-        viz.speed_var = DummyVar(1.0)
-        viz.target_fps_var = DummyVar("60")
+        viz.view_mode_var = _DummyVar("single")
+        viz.lead_focus_var = _DummyVar("II")
+        viz.speed_var = _DummyVar(1.0)
+        viz.target_fps_var = _DummyVar("60")
 
         with patch.object(viz, "_animate_once") as animate_once:
             viz.toggle_play()

@@ -14,7 +14,6 @@ import numpy as np
 
 from .core import ECGCore, MultiLeadECG
 from .ui_registry import (
-    DISPLAY_CONTROL_SPECS,
     DURATION,
     RHYTHM_REGISTRY,
     ParameterSpec,
@@ -57,7 +56,11 @@ def _scaled_signal(signal: np.ndarray, gain: float) -> np.ndarray:
 
 
 def _signal_ylim(signals: Iterable[np.ndarray]) -> Tuple[float, float]:
-    populated = [np.asarray(signal) for signal in signals if np.asarray(signal).size]
+    populated = []
+    for signal in signals:
+        signal = np.asarray(signal)
+        if signal.size:
+            populated.append(signal)
     if not populated:
         return -2.5, 2.5
 
@@ -243,8 +246,6 @@ def export_ecg_csv(ecg: ECGCore, path) -> None:
 
 class ECGVisualizer:
     """Tk application for clinical ECG inspection."""
-
-    CONTROL_FIELDS = tuple(control.name for control in DISPLAY_CONTROL_SPECS)
 
     def __init__(self, master: tk.Tk):
         self.master = master
@@ -553,9 +554,7 @@ class ECGVisualizer:
     def toggle_play(self) -> None:
         if self.is_playing:
             self._set_playing(False)
-            if self.animation_timer is not None:
-                self.master.after_cancel(self.animation_timer)
-                self.animation_timer = None
+            self._cancel_animation_timer()
             self._refresh_status()
             return
         self._set_playing(True)
@@ -566,6 +565,11 @@ class ECGVisualizer:
         self.is_playing = playing
         if hasattr(self, "play_button_var"):
             self.play_button_var.set("Pause" if playing else "Play")
+
+    def _cancel_animation_timer(self) -> None:
+        if self.animation_timer is not None:
+            self.master.after_cancel(self.animation_timer)
+            self.animation_timer = None
 
     def _var_value(self, name: str, default):
         variable = getattr(self, name, None)
@@ -652,9 +656,7 @@ class ECGVisualizer:
 
     def reset(self) -> None:
         self._set_playing(False)
-        if self.animation_timer is not None:
-            self.master.after_cancel(self.animation_timer)
-            self.animation_timer = None
+        self._cancel_animation_timer()
         self.frame_index = 0
         self.update_plot()
 
