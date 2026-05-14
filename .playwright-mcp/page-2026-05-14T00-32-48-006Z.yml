@@ -1,0 +1,70 @@
+- main [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Rhythm" [level=2] [ref=e5]
+      - generic [ref=e6]:
+        - generic [ref=e7]: Rhythm
+        - combobox "Rhythm" [ref=e8]:
+          - option "Normal Sinus Rhythm" [selected]
+          - option "Atrial Fibrillation"
+          - option "Atrial Flutter"
+          - option "First-Degree AV Block"
+          - option "Third-Degree AV Block"
+          - option "Bundle Branch Block"
+          - option "Supraventricular Tachycardia"
+          - option "Multifocal Atrial Tachycardia"
+          - option "Ventricular Tachycardia"
+          - option "Ventricular Fibrillation"
+          - option "Torsades de Pointes"
+          - option "Wolff-Parkinson-White"
+          - option "Asystole"
+    - heading "Parameters" [level=2] [ref=e10]
+    - generic [ref=e11]:
+      - heading "Display" [level=2] [ref=e12]
+      - generic [ref=e13]:
+        - generic [ref=e14]: View
+        - combobox "View" [ref=e15]:
+          - option "single"
+          - option "12-lead" [selected]
+      - generic [ref=e16]:
+        - generic [ref=e17]: Lead focus
+        - combobox "Lead focus" [ref=e18]:
+          - option "I"
+          - option "II" [selected]
+          - option "III"
+          - option "aVR"
+          - option "aVL"
+          - option "aVF"
+          - option "V1"
+          - option "V2"
+          - option "V3"
+          - option "V4"
+          - option "V5"
+          - option "V6"
+      - generic [ref=e19]:
+        - generic [ref=e20]: ECG grid
+        - checkbox "ECG grid" [checked] [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e23]: Gain (mm/mV)
+        - spinbutton "Gain (mm/mV)" [ref=e24]: "10"
+      - generic [ref=e25]:
+        - generic [ref=e26]: Paper speed (mm/s)
+        - spinbutton "Paper speed (mm/s)" [ref=e27]: "25"
+      - generic [ref=e28]:
+        - generic [ref=e29]: Playback (x)
+        - spinbutton "Playback (x)" [ref=e30]: "1"
+      - generic [ref=e31]:
+        - generic [ref=e32]: Target FPS
+        - combobox "Target FPS" [ref=e33]:
+          - option "24"
+          - option "30"
+          - option "60" [selected]
+          - option "120"
+    - generic [ref=e34]:
+      - heading "Actions" [level=2] [ref=e35]
+      - generic [ref=e36]:
+        - button "Play" [ref=e37] [cursor=pointer]
+        - button "Reset" [ref=e38] [cursor=pointer]
+      - generic [ref=e39]:
+        - button "Export Image" [ref=e40] [cursor=pointer]
+        - button "Export CSV" [ref=e41] [cursor=pointer]

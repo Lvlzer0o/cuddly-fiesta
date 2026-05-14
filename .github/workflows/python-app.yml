@@ -33,3 +33,17 @@ jobs:
       run: flake8 .
     - name: Test
       run: pytest -q
+    - name: Smoke entry points
+      run: |
+        python -m cuddly_fiesta --help
+        python - <<'PY'
+        from importlib.metadata import entry_points
+
+        scripts = {
+            entry_point.name: entry_point.value
+            for entry_point in entry_points(group="console_scripts")
+        }
+        expected = "cuddly_fiesta.ecg_visualizer:run_visualizer"
+        assert scripts["ecg-gui"] == expected
+        assert scripts["ecg-visualizer"] == expected
+        PY

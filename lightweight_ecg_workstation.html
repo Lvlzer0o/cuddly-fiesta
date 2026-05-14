@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ECG Clinical Workstation (Lightweight)</title>
+  <style>
+    :root {
+      --panel-bg: #eef2f4;
+      --panel-frame: #d7dee4;
+      --panel-border: #c2ccd7;
+      --text-main: #1f2933;
+      --button-bg: #f3f6f9;
+      --button-border: #b6c0ca;
+      --paper: #fffafa;
+      --grid-major: #e7a6a6;
+      --grid-minor: #f5d7d7;
+      --trace: #1d1d1d;
+      --trace-focus: #b3002d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: "Segoe UI", Tahoma, "Helvetica Neue", Arial, sans-serif;
+      font-size: 14px;
+      background: var(--panel-bg);
+      color: var(--text-main);
+      display: flex;
+    }
+
+    .app {
+      display: flex;
+      width: 100%;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .controls {
+      width: 320px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .section {
+      background: #f1f4f7;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    .section h2 {
+      margin: 2px 0 8px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #28323b;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .row label {
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    select,
+    input,
+    button {
+      font: inherit;
+      border: 1px solid var(--button-border);
+      border-radius: 3px;
+      padding: 4px 9px;
+      background: white;
+    }
+
+    select,
+    input[type="number"] {
+      width: 136px;
+      height: 30px;
+    }
+
+    button {
+      background: var(--button-bg);
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(0.97);
+    }
+
+    .param-row {
+      margin-bottom: 6px;
+    }
+
+    .param-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .param-row .label {
+      display: inline-block;
+      min-width: 140px;
+      font-size: 13px;
+    }
+
+    .param-row input,
+    .param-row select {
+      width: 130px;
+    }
+
+    .status {
+      min-height: 24px;
+      padding: 4px 2px 0;
+      font-size: 13px;
+      line-height: 1.3;
+      color: #1f2933;
+      white-space: normal;
+    }
+
+    .viewer {
+      flex: 1;
+      display: flex;
+      min-width: 0;
+      background: #ecf1f5;
+      border: 1px solid var(--panel-frame);
+      border-radius: 6px;
+      padding: 8px;
+      min-height: calc(100vh - 20px);
+      align-items: stretch;
+    }
+
+    .canvas-card {
+      width: 100%;
+      height: 100%;
+      background: #fffdfd;
+      border: 1px solid #e0e6ec;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .rhythm-pick {
+      width: 100%;
+      height: 32px;
+    }
+
+    .action-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-stack button {
+      width: 100%;
+      text-align: left;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: var(--paper);
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="controls">
+      <section class="section">
+        <h2>Rhythm</h2>
+        <select id="rhythmSelect" class="rhythm-pick"></select>
+      </section>
+
+      <section class="section">
+        <h2>Parameters</h2>
+        <div id="parameters"></div>
+      </section>
+
+      <section class="section">
+        <h2>Display</h2>
+        <div class="row">
+          <label for="viewMode">View</label>
+          <select id="viewMode"></select>
+        </div>
+        <div class="row">
+          <label for="leadFocus">Lead focus</label>
+          <select id="leadFocus"></select>
+        </div>
+        <div class="row">
+          <label for="showGrid">ECG grid</label>
+          <input id="showGrid" type="checkbox" checked />
+        </div>
+        <div id="gain" class="row">
+          <label for="gainInput">Gain (mm/mV)</label>
+          <input id="gainInput" type="number" step="1" min="5" max="20" value="10" />
+        </div>
+        <div id="paperSpeed" class="row">
+          <label for="paperSpeedInput">Paper speed (mm/s)</label>
+          <input id="paperSpeedInput" type="number" step="12.5" min="12.5" max="50" value="25" />
+        </div>
+        <div id="playback" class="row">
+          <label for="playbackInput">Playback (x)</label>
+          <input id="playbackInput" type="number" step="0.25" min="0.25" max="4" value="1" />
+        </div>
+        <div id="targetFpsRow" class="row">
+          <label for="targetFps">Target FPS</label>
+          <select id="targetFps"></select>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Actions</h2>
+        <div class="action-stack">
+          <button id="playBtn">Play</button>
+          <button id="resetBtn">Reset</button>
+          <button id="exportImageBtn">Export Image</button>
+          <button id="exportCsvBtn">Export CSV</button>
+        </div>
+      </section>
+
+      <div class="status" id="status"></div>
+    </aside>
+
+    <section class="viewer">
+      <div class="canvas-card">
+        <canvas id="ecgCanvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const RHYTHM_REGISTRY = [
+      {
+        key: "normal_sinus",
+        label: "Normal Sinus Rhythm",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 30, max: 250, step: 1, value: 70, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "atrial_fibrillation",
+        label: "Atrial Fibrillation",
+        params: [
+          {name: "ventricular_rate_bpm", label: "Ventricular rate", kind: "int", min: 60, max: 180, step: 1, value: 110, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "atrial_flutter",
+        label: "Atrial Flutter",
+        params: [
+          {name: "atrial_rate_bpm", label: "Atrial rate", kind: "int", min: 220, max: 350, step: 5, value: 300, units: "bpm"},
+          {name: "conduction_ratio", label: "AV ratio", kind: "choice", options: ["2", "3", "4"], value: "2"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "first_degree_av_block",
+        label: "First-Degree AV Block",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 30, max: 250, step: 1, value: 70, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+          {name: "pr_interval_ms", label: "PR interval", kind: "int", min: 200, max: 360, step: 10, value: 240, units: "ms"},
+        ],
+      },
+      {
+        key: "third_degree_av_block",
+        label: "Third-Degree AV Block",
+        params: [
+          {name: "atrial_rate_bpm", label: "Atrial rate", kind: "int", min: 45, max: 120, step: 1, value: 75, units: "bpm"},
+          {name: "ventricular_rate_bpm", label: "Ventricular rate", kind: "int", min: 25, max: 70, step: 1, value: 40, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "bundle_branch_block",
+        label: "Bundle Branch Block",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 30, max: 250, step: 1, value: 70, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+          {name: "qrs_duration_ms", label: "QRS duration", kind: "int", min: 120, max: 200, step: 5, value: 140, units: "ms"},
+          {name: "block_type", label: "Block type", kind: "choice", options: ["right", "left"], value: "right"},
+        ],
+      },
+      {
+        key: "supraventricular_tachycardia",
+        label: "Supraventricular Tachycardia",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 150, max: 250, step: 1, value: 180, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "multifocal_atrial_tachycardia",
+        label: "Multifocal Atrial Tachycardia",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 101, max: 180, step: 1, value: 120, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "ventricular_tachycardia",
+        label: "Ventricular Tachycardia",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 120, max: 240, step: 1, value: 180, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "ventricular_fibrillation",
+        label: "Ventricular Fibrillation",
+        params: [
+          {name: "amplitude_mv", label: "Amplitude", kind: "float", min: 0.1, max: 1.5, step: 0.1, value: 0.5, units: "mV"},
+        ],
+      },
+      {
+        key: "torsades_de_pointes",
+        label: "Torsades de Pointes",
+        params: [
+          {name: "ventricular_rate_bpm", label: "Ventricular rate", kind: "int", min: 150, max: 300, step: 1, value: 200, units: "bpm"},
+          {name: "twist_frequency_hz", label: "Twist frequency", kind: "float", min: 0.1, max: 1.5, step: 0.1, value: 0.5, units: "Hz"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+        ],
+      },
+      {
+        key: "wolff_parkinson_white",
+        label: "Wolff-Parkinson-White",
+        params: [
+          {name: "heart_rate_bpm", label: "Heart rate", kind: "int", min: 30, max: 250, step: 1, value: 70, units: "bpm"},
+          {name: "duration_sec", label: "Duration", kind: "float", min: 1, max: 30, step: 1, value: 10, units: "s"},
+          {name: "pr_interval_ms", label: "PR interval", kind: "int", min: 60, max: 119, step: 5, value: 100, units: "ms"},
+        ],
+      },
+      {
+        key: "asystole",
+        label: "Asystole",
+        params: [],
+      },
+    ];
+
+    const LEADS = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"];
+    const DISPLAY_LAYOUT = [
+      ["I", "aVR", "V1", "V4"],
+      ["II", "aVL", "V2", "V5"],
+      ["III", "aVF", "V3", "V6"],
+    ];
+    const FPS_OPTIONS = ["24", "30", "60", "120"];
+
+    const leadOffset = {
+      I: 0.0,
+      II: 0.2,
+      III: 0.1,
+      aVR: -0.1,
+      aVL: -0.25,
+      aVF: 0.4,
+      V1: -0.5,
+      V2: -0.3,
+      V3: -0.1,
+      V4: 0.05,
+      V5: 0.15,
+      V6: 0.3,
+    };
+
+    const controls = {
+      rhythmSelect: document.getElementById("rhythmSelect"),
+      parameters: document.getElementById("parameters"),
+      viewMode: document.getElementById("viewMode"),
+      leadFocus: document.getElementById("leadFocus"),
+      showGrid: document.getElementById("showGrid"),
+      gainInput: document.getElementById("gainInput"),
+      paperSpeedInput: document.getElementById("paperSpeedInput"),
+      playbackInput: document.getElementById("playbackInput"),
+      targetFps: document.getElementById("targetFps"),
+      playBtn: document.getElementById("playBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      exportImageBtn: document.getElementById("exportImageBtn"),
+      exportCsvBtn: document.getElementById("exportCsvBtn"),
+      status: document.getElementById("status"),
+    };
+
+    const state = {
+      rhythmKey: RHYTHM_REGISTRY[0].key,
+      rhythmValues: {},
+      viewMode: "12-lead",
+      leadFocus: "II",
+      showGrid: true,
+      gain: 10,
+      paperSpeed: 25,
+      playback: 1.0,
+      targetFps: "60",
+      isPlaying: false,
+      playHeadSec: 0,
+      timerId: null,
+      sampleRate: 400,
+    };
+
+    const canvas = document.getElementById("ecgCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function setCanvasSize() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(280, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      redraw();
+    }
+
+    function initControls() {
+      RHYTHM_REGISTRY.forEach((spec) => {
+        const opt = document.createElement("option");
+        opt.value = spec.key;
+        opt.textContent = spec.label;
+        controls.rhythmSelect.appendChild(opt);
+      });
+
+      [["single", "single"], ["12-lead", "12-lead"]].forEach(([v, label]) => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = label;
+        controls.viewMode.appendChild(opt);
+      });
+
+      LEADS.forEach((lead) => {
+        const opt = document.createElement("option");
+        opt.value = lead;
+        opt.textContent = lead;
+        controls.leadFocus.appendChild(opt);
+      });
+
+      FPS_OPTIONS.forEach((fps) => {
+        const opt = document.createElement("option");
+        opt.value = fps;
+        opt.textContent = fps;
+        controls.targetFps.appendChild(opt);
+      });
+
+      controls.viewMode.value = state.viewMode;
+      controls.leadFocus.value = state.leadFocus;
+      controls.targetFps.value = state.targetFps;
+
+      controls.rhythmSelect.addEventListener("change", onRhythmChange);
+      controls.showGrid.addEventListener("change", onDisplayChange);
+      controls.gainInput.addEventListener("input", onDisplayChange);
+      controls.paperSpeedInput.addEventListener("input", onDisplayChange);
+      controls.playbackInput.addEventListener("input", onDisplayChange);
+      controls.targetFps.addEventListener("change", onDisplayChange);
+      controls.viewMode.addEventListener("change", onDisplayChange);
+      controls.leadFocus.addEventListener("change", onDisplayChange);
+      controls.playBtn.addEventListener("click", togglePlay);
+      controls.resetBtn.addEventListener("click", resetPlot);
+      controls.exportImageBtn.addEventListener("click", exportImage);
+      controls.exportCsvBtn.addEventListener("click", exportCsv);
+      window.addEventListener("resize", setCanvasSize);
+      controls.rhythmSelect.value = state.rhythmKey;
+      syncRhythmDefaults();
+      renderParameters();
+    }
+
+    function onRhythmChange() {
+      state.rhythmKey = controls.rhythmSelect.value;
+      syncRhythmDefaults();
+      renderParameters();
+      redraw();
+      stopPlayback();
+    }
+
+    function syncRhythmDefaults() {
+      const spec = RHYTHM_REGISTRY.find((item) => item.key === state.rhythmKey);
+      const defaults = {};
+      spec.params.forEach((param) => {
+        defaults[param.name] = param.value;
+      });
+      state.rhythmValues = defaults;
+    }
+
+    function renderParameters() {
+      const spec = RHYTHM_REGISTRY.find((item) => item.key === state.rhythmKey);
+      controls.parameters.innerHTML = "";
+
+      if (!spec.params.length) {
+        controls.parameters.innerHTML = '<div class="row">No rhythm parameters</div>';
+        return;
+      }
+
+      spec.params.forEach((param) => {
+        const row = document.createElement("div");
+        row.className = "row param-row";
+
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = `${param.label}${param.units ? ` (${param.units})` : ""}`;
+        row.appendChild(label);
+
+        let field;
+        if (param.kind === "choice") {
+          field = document.createElement("select");
+          param.options.forEach((option) => {
+            const optionNode = document.createElement("option");
+            optionNode.value = option;
+            optionNode.textContent = option;
+            if (option.toString() === state.rhythmValues[param.name].toString()) {
+              optionNode.selected = true;
+            }
+            field.appendChild(optionNode);
+          });
+          field.value = String(state.rhythmValues[param.name]);
+        } else {
+          field = document.createElement("input");
+          field.type = "number";
+          field.step = String(param.step);
+          field.min = String(param.min ?? 0);
+          field.max = String(param.max ?? 999);
+          field.value = String(state.rhythmValues[param.name]);
+        }
+
+        field.dataset.paramName = param.name;
+        field.dataset.kind = param.kind;
+        field.addEventListener("input", onParameterChange);
+        row.appendChild(field);
+        controls.parameters.appendChild(row);
+      });
+    }
+
+    function onParameterChange(event) {
+      const target = event.target;
+      const name = target.dataset.paramName;
+      if (!name) {
+        return;
+      }
+
+      let value = target.value;
+      if (target.dataset.kind !== "choice") {
+        const numeric = Number(value);
+        if (!Number.isNaN(numeric)) {
+          value = numeric;
+        }
+      }
+      state.rhythmValues[name] = value;
+      redraw();
+      stopPlayback();
+    }
+
+    function onDisplayChange() {
+      state.viewMode = controls.viewMode.value;
+      state.leadFocus = controls.leadFocus.value;
+      state.showGrid = controls.showGrid.checked;
+      state.gain = Number(controls.gainInput.value) || 10;
+      state.paperSpeed = Number(controls.paperSpeedInput.value) || 25;
+      state.playback = Number(controls.playbackInput.value) || 1;
+      state.targetFps = controls.targetFps.value;
+      redraw();
+      updateStatus();
+      if (!state.isPlaying) {
+        state.playHeadSec = 0;
+        stopPlayback();
+      }
+    }
+
+    function getCurrentRhythmSpec() {
+      return RHYTHM_REGISTRY.find((item) => item.key === state.rhythmKey);
+    }
+
+    function rhythmParameter(name, fallback = 0) {
+      const raw = state.rhythmValues[name];
+      if (raw === undefined || raw === null || raw === "") {
+        return fallback;
+      }
+      if (typeof raw === "number") {
+        return raw;
+      }
+      return Number(raw) || fallback;
+    }
+
+    function estimatedBpm() {
+      return Math.max(
+        30,
+        rhythmParameter("heart_rate_bpm",
+          Math.max(rhythmParameter("ventricular_rate_bpm", 70), rhythmParameter("atrial_rate_bpm", 70)),
+        ),
+      );
+    }
+
+    function leadSignal(lead, t, rhythmSpec) {
+      const bpm = estimatedBpm();
+      const cycleSec = 60 / bpm;
+      const cycleT = ((t % cycleSec) + cycleSec) % cycleSec;
+      const pWave = 0.22 * Math.exp(-Math.pow((cycleT - 0.12) / 0.02, 2));
+      const qrs = 1.35 * Math.exp(-Math.pow((cycleT - cycleSec * 0.18) / 0.006, 2));
+      const tWave = 0.28 * Math.exp(-Math.pow((cycleT - cycleSec * 0.35) / 0.03, 2));
+      const sinusoid = 0.12 * Math.sin(2 * Math.PI * (bpm / 60) * t);
+      const irregular = (rhythmSpec.key === "atrial_fibrillation" || rhythmSpec.key === "ventricular_fibrillation")
+        ? 0.45 * (Math.sin(2 * Math.PI * (bpm / 8) * t + (0.18 * Math.PI * rhythmSpec.key.length))
+        + (0.05 * Math.sin((t * 41.23) + lead.charCodeAt(0)))
+      )
+        : 0;
+      const torsade = rhythmSpec.key === "torsades_de_pointes"
+        ? 0.35 * Math.sin(2 * Math.PI * (rhythmParameter("twist_frequency_hz", 0.5) || 0.1) * t)
+        : 0;
+      const vfAmp = rhythmSpec.key === "ventricular_fibrillation"
+        ? rhythmParameter("amplitude_mv", 0.5) * 0.9
+        : rhythmParameter("qrs_duration_ms", 140) ? (rhythmParameter("qrs_duration_ms", 140) - 110) / 1000 : 0.3;
+      const baseline = rhythmSpec.key === "asystole" ? 0 : leadOffset[lead] + 0.0;
+      return (baseline + pWave + qrs + tWave + sinusoid + irregular + torsade) * (rhythmSpec.key === "bundle_branch_block" ? 1.4 : 1) * (0.5 + vfAmp);
+    }
+
+    function computeWaveRows(durationSec) {
+      const sampleRate = state.sampleRate;
+      const rhythmSpec = getCurrentRhythmSpec();
+      const points = Math.max(2, Math.floor(durationSec * sampleRate));
+      const perLead = {};
+      LEADS.forEach((lead) => (perLead[lead] = new Array(points)));
+      for (let i = 0; i < points; i += 1) {
+        const t = i / sampleRate;
+        LEADS.forEach((lead) => {
+          perLead[lead][i] = leadSignal(lead, t, rhythmSpec);
+        });
+      }
+      return {perLead, sampleRate, points};
+    }
+
+    function drawGridAxes(x, y, width, height, showLabels, leadName, isFocus) {
+      if (!state.showGrid) {
+        return;
+      }
+      const pxPerSec = 60 * (state.paperSpeed / 25);
+      const pxPerMv = 55 * (state.gain / 10);
+      ctx.lineWidth = 1;
+      for (let sec = 0; sec <= durationForVisibleWindow() + 0.1; sec += 0.2) {
+        const gx = x + (sec * pxPerSec);
+        if (gx > x + width) {
+          continue;
+        }
+        const major = sec % 1 === 0;
+        ctx.strokeStyle = major ? "#e7a6a6" : "#f5d7d7";
+        ctx.lineWidth = major ? 0.7 : 0.4;
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + height);
+        ctx.stroke();
+      }
+
+      for (let mv = -4; mv <= 4; mv += 0.2) {
+        const gy = y + height / 2 - mv * pxPerMv;
+        const major = mv % 1 === 0;
+        ctx.strokeStyle = major ? "#e7a6a6" : "#f5d7d7";
+        ctx.lineWidth = major ? 0.7 : 0.4;
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + width, gy);
+        ctx.stroke();
+      }
+      if (showLabels) {
+        ctx.fillStyle = isFocus ? "#111827" : "#6b7280";
+        ctx.font = "bold 13px Arial";
+        ctx.fillText(leadName, x + 6, y + 16);
+      }
+    }
+
+    function drawSignalLine(x, y, width, height, values, focusLead, sampleOffset = 0, singleLead = true) {
+      if (!values.length) {
+        return;
+      }
+
+      const leadMax = 2.5;
+      const leadMin = -2.5;
+      const visible = durationForVisibleWindow();
+      const pxPerSec = width / visible;
+      const ampRange = leadMax - leadMin;
+      const ampScale = height / (ampRange * 1.35 * (12 / state.gain));
+
+      ctx.beginPath();
+      for (let i = 0; i < values.length; i += 1) {
+        const t = i / (values.length - 1);
+        const sec = t * visible;
+        const xPos = x + sec * pxPerSec;
+        const voltage = values[i];
+        const yPos = y + height / 2 - voltage * ampScale;
+        if (i === 0) {
+          ctx.moveTo(xPos, yPos);
+        } else {
+          ctx.lineTo(xPos, yPos);
+        }
+      }
+      ctx.strokeStyle = focusLead ? "#b3002d" : "#1d1d1d";
+      ctx.lineWidth = focusLead ? 2 : 1.1;
+      ctx.stroke();
+    }
+
+    function durationForVisibleWindow() {
+      return state.viewMode === "single" ? 6 : rhythmParameter("duration_sec", 10);
+    }
+
+    function drawSingle(values, totalWidth, totalHeight) {
+      const lead = state.leadFocus;
+      const sampleRate = state.sampleRate;
+      const windowSec = durationForVisibleWindow();
+      const durationSec = rhythmParameter("duration_sec", windowSec);
+      const windowPoints = Math.floor(windowSec * sampleRate);
+      const allPoints = values[lead];
+      let startIndex = Math.floor((state.playHeadSec / Math.max(durationSec, 0.001)) * allPoints.length);
+      if (!Number.isFinite(startIndex) || startIndex < 0) {
+        startIndex = 0;
+      }
+      const windowed = [];
+      for (let i = 0; i < windowPoints; i += 1) {
+        const idx = (startIndex + i) % allPoints.length;
+        windowed.push(allPoints[idx]);
+      }
+
+      const pxPad = 12;
+      const left = pxPad;
+      const right = totalWidth - pxPad;
+      const top = pxPad;
+      const bottom = totalHeight - pxPad;
+      drawGridAxes(left, top, right - left, bottom - top, true, lead, true);
+      drawSignalLine(left, top, right - left, bottom - top, windowed, true, startIndex, true);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = "14px Arial";
+      const info = `${state.viewMode} | Lead ${lead} | ${state.paperSpeed} mm/s | ${state.gain} mm/mV`;
+      ctx.fillText(info, totalWidth - 240, totalHeight - 12);
+    }
+
+    function drawTwelveLead(values, totalWidth, totalHeight) {
+      const pad = 10;
+      const gap = 8;
+      const cols = 4;
+      const rows = 3;
+      const cellW = (totalWidth - pad * 2 - gap * (cols - 1)) / cols;
+      const cellH = (totalHeight - pad * 2 - gap * (rows - 1)) / rows;
+
+      let index = 0;
+      for (let r = 0; r < rows; r += 1) {
+        for (let c = 0; c < cols; c += 1) {
+          const lead = DISPLAY_LAYOUT[r][c];
+          const x = pad + c * (cellW + gap);
+          const y = pad + r * (cellH + gap);
+          const points = values[lead];
+          drawGridAxes(x, y, cellW, cellH, true, lead, lead === state.leadFocus);
+          drawSignalLine(x + 2, y + 6, cellW - 4, cellH - 12, points, lead === state.leadFocus, 0, false);
+          index += 1;
+        }
+      }
+      ctx.fillStyle = "#111827";
+      ctx.font = "14px Arial";
+      ctx.fillText(`12-lead ECG | ${state.paperSpeed} mm/s | ${state.gain} mm/mV`, 12, 24);
+    }
+
+    function redraw() {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#fffafa";
+      ctx.fillRect(0, 0, width, height);
+
+      const duration = rhythmParameter("duration_sec", 10);
+      const {perLead} = computeWaveRows(duration);
+      if (state.viewMode === "single") {
+        drawSingle(perLead, width, height);
+      } else {
+        drawTwelveLead(perLead, width, height);
+      }
+      updateStatus();
+    }
+
+    function updateStatus() {
+      const rhythm = getCurrentRhythmSpec().label;
+      const stateName = state.isPlaying ? "Playing" : "Stopped";
+      controls.status.textContent = `${rhythm} | ${rhythmParameter("duration_sec", 10)}s | ${stateName} | ${state.viewMode} | Lead ${state.leadFocus} | ${state.playback}x | ${state.targetFps} FPS`;
+      controls.playBtn.textContent = state.isPlaying ? "Pause" : "Play";
+    }
+
+    function togglePlay() {
+      if (state.isPlaying) {
+        stopPlayback();
+        redraw();
+        return;
+      }
+      state.isPlaying = true;
+      updateStatus();
+      const tickMs = Math.round(1000 / Number(state.targetFps));
+      state.timerId = setInterval(() => {
+        const totalDuration = rhythmParameter("duration_sec", 10);
+        const stepSec = Math.max(0.01, tickMs / 1000 * state.playback);
+        state.playHeadSec += stepSec;
+        if (state.playHeadSec >= totalDuration) {
+          state.playHeadSec = 0;
+        }
+        redraw();
+      }, tickMs);
+    }
+
+    function stopPlayback() {
+      if (state.timerId !== null) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      state.isPlaying = false;
+      updateStatus();
+    }
+
+    function resetPlot() {
+      stopPlayback();
+      state.playHeadSec = 0;
+      redraw();
+    }
+
+    function exportImage() {
+      const link = document.createElement("a");
+      link.download = "ecg-workstation-mirror.png";
+      link.href = canvas.toDataURL("image/png", 1.0);
+      link.click();
+    }
+
+    function exportCsv() {
+      const duration = rhythmParameter("duration_sec", 10);
+      const sampleRate = state.sampleRate;
+      const points = Math.floor(duration * sampleRate);
+      const {perLead} = computeWaveRows(duration);
+      const header = ["time_s", ...LEADS].join(",");
+      const rows = [header];
+      for (let i = 0; i < points; i += 1) {
+        const t = (i / sampleRate).toFixed(4);
+        const row = [t];
+        LEADS.forEach((lead) => {
+          row.push(String(perLead[lead][i].toFixed(4)));
+        });
+        rows.push(row.join(","));
+      }
+
+      const blob = new Blob([rows.join("\n")], {type: "text/csv;charset=utf-8"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "ecg-workstation-mirror.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    initControls();
+    setCanvasSize();
+    redraw();
+  </script>
+</body>
+</html>

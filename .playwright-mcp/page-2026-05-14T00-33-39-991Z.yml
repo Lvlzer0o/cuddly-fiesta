@@ -1,0 +1,79 @@
+- main [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Rhythm" [level=2] [ref=e5]
+      - generic [ref=e6]:
+        - generic [ref=e7]: Rhythm
+        - combobox "Rhythm" [ref=e8]:
+          - option "Normal Sinus Rhythm" [selected]
+          - option "Atrial Fibrillation"
+          - option "Atrial Flutter"
+          - option "First-Degree AV Block"
+          - option "Third-Degree AV Block"
+          - option "Bundle Branch Block"
+          - option "Supraventricular Tachycardia"
+          - option "Multifocal Atrial Tachycardia"
+          - option "Ventricular Tachycardia"
+          - option "Ventricular Fibrillation"
+          - option "Torsades de Pointes"
+          - option "Wolff-Parkinson-White"
+          - option "Asystole"
+    - generic [ref=e9]:
+      - heading "Parameters" [level=2] [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Heart rate (bpm)
+          - spinbutton [ref=e14]: "70"
+        - generic [ref=e15]:
+          - generic [ref=e16]: Duration (s)
+          - spinbutton [ref=e17]: "10"
+    - generic [ref=e18]:
+      - heading "Display" [level=2] [ref=e19]
+      - generic [ref=e20]:
+        - generic [ref=e21]: View
+        - combobox "View" [ref=e22]:
+          - option "single"
+          - option "12-lead" [selected]
+      - generic [ref=e23]:
+        - generic [ref=e24]: Lead focus
+        - combobox "Lead focus" [ref=e25]:
+          - option "I"
+          - option "II" [selected]
+          - option "III"
+          - option "aVR"
+          - option "aVL"
+          - option "aVF"
+          - option "V1"
+          - option "V2"
+          - option "V3"
+          - option "V4"
+          - option "V5"
+          - option "V6"
+      - generic [ref=e26]:
+        - generic [ref=e27]: ECG grid
+        - checkbox "ECG grid" [checked] [ref=e28]
+      - generic [ref=e29]:
+        - generic [ref=e30]: Gain (mm/mV)
+        - spinbutton "Gain (mm/mV)" [ref=e31]: "10"
+      - generic [ref=e32]:
+        - generic [ref=e33]: Paper speed (mm/s)
+        - spinbutton "Paper speed (mm/s)" [ref=e34]: "25"
+      - generic [ref=e35]:
+        - generic [ref=e36]: Playback (x)
+        - spinbutton "Playback (x)" [ref=e37]: "1"
+      - generic [ref=e38]:
+        - generic [ref=e39]: Target FPS
+        - combobox "Target FPS" [ref=e40]:
+          - option "24"
+          - option "30"
+          - option "60" [selected]
+          - option "120"
+    - generic [ref=e41]:
+      - heading "Actions" [level=2] [ref=e42]
+      - generic [ref=e43]:
+        - button "Play" [ref=e44] [cursor=pointer]
+        - button "Reset" [ref=e45] [cursor=pointer]
+      - generic [ref=e46]:
+        - button "Export Image" [ref=e47] [cursor=pointer]
+        - button "Export CSV" [ref=e48] [cursor=pointer]
+    - generic [ref=e49]: Normal Sinus Rhythm | 10s | Stopped | 12-lead | Lead II | 1x | 60 FPS
