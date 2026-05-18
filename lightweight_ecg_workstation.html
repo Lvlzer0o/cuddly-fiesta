@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
   <title>ECG Clinical Workstation (Lightweight)</title>
   <style>
     :root {
@@ -707,22 +708,27 @@
       return state.viewMode === "single" ? 6 : rhythmParameter("duration_sec", 10);
     }
 
-    function drawSingle(values, totalWidth, totalHeight) {
-      const lead = state.leadFocus;
-      const sampleRate = state.sampleRate;
-      const windowSec = durationForVisibleWindow();
-      const durationSec = rhythmParameter("duration_sec", windowSec);
-      const windowPoints = Math.floor(windowSec * sampleRate);
-      const allPoints = values[lead];
+    function windowLeadValues(allPoints, windowSec, durationSec) {
+      const windowPoints = Math.floor(windowSec * state.sampleRate);
       let startIndex = Math.floor((state.playHeadSec / Math.max(durationSec, 0.001)) * allPoints.length);
       if (!Number.isFinite(startIndex) || startIndex < 0) {
         startIndex = 0;
       }
+
       const windowed = [];
       for (let i = 0; i < windowPoints; i += 1) {
         const idx = (startIndex + i) % allPoints.length;
         windowed.push(allPoints[idx]);
       }
+      return windowed;
+    }
+
+    function drawSingle(values, totalWidth, totalHeight) {
+      const lead = state.leadFocus;
+      const windowSec = durationForVisibleWindow();
+      const durationSec = rhythmParameter("duration_sec", windowSec);
+      const allPoints = values[lead];
+      const windowed = windowLeadValues(allPoints, windowSec, durationSec);
 
       const pxPad = 12;
       const left = pxPad;
@@ -730,7 +736,7 @@
       const top = pxPad;
       const bottom = totalHeight - pxPad;
       drawGridAxes(left, top, right - left, bottom - top, true, lead, true);
-      drawSignalLine(left, top, right - left, bottom - top, windowed, true, startIndex, true);
+      drawSignalLine(left, top, right - left, bottom - top, windowed, true, 0, true);
 
       ctx.fillStyle = "#111827";
       ctx.font = "14px Arial";
@@ -745,6 +751,8 @@
       const rows = 3;
       const cellW = (totalWidth - pad * 2 - gap * (cols - 1)) / cols;
       const cellH = (totalHeight - pad * 2 - gap * (rows - 1)) / rows;
+      const windowSec = durationForVisibleWindow();
+      const durationSec = rhythmParameter("duration_sec", windowSec);
 
       let index = 0;
       for (let r = 0; r < rows; r += 1) {
@@ -752,7 +760,7 @@
           const lead = DISPLAY_LAYOUT[r][c];
           const x = pad + c * (cellW + gap);
           const y = pad + r * (cellH + gap);
-          const points = values[lead];
+          const points = windowLeadValues(values[lead], windowSec, durationSec);
           drawGridAxes(x, y, cellW, cellH, true, lead, lead === state.leadFocus);
           drawSignalLine(x + 2, y + 6, cellW - 4, cellH - 12, points, lead === state.leadFocus, 0, false);
           index += 1;

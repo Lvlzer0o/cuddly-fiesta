@@ -84,6 +84,23 @@ The playback status line reports the current rhythm, duration, playback state,
 view mode, lead, speed, and target FPS. Use lower FPS targets for older systems
 and higher targets when the machine can sustain smoother redraws.
 
+`lightweight_ecg_workstation.html` is a standalone browser mirror for quick
+layout checks when Tk is unavailable. It does not import the Python ECG engine;
+use the Tk GUI and CLI commands for package behavior.
+
+Launch the mirror from the repository root:
+
+```powershell
+Start-Process .\lightweight_ecg_workstation.html
+```
+
+No dev server is required. If a browser blocks direct file access, serve the
+repository root and open `http://localhost:8000/lightweight_ecg_workstation.html`:
+
+```bash
+python -m http.server 8000
+```
+
 Installed console scripts:
 
 ```bash

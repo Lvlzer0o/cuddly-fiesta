@@ -1,4 +1,0 @@
-[[actions]]
-name = "Run"
-icon = "run"
-command = "python -m cuddly_fiesta gui"

@@ -25,6 +25,8 @@ dist/
 # Local/editor metadata
 .idea/
 .vscode/
+.codex/
+.playwright-mcp/
 .DS_Store
 Thumbs.db
 
@@ -33,4 +35,5 @@ Thumbs.db
 *.sarif
 *.sarif.json
 *.pyz
+/*.png
 
